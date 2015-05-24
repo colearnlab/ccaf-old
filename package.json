@@ -1,0 +1,14 @@
+{
+  "main": "main.js",
+  "devDependencies": {
+    "electron-prebuilt": "^0.26.0",
+    "flatten-packages": "^0.1.4"
+  },
+  "dependencies": {
+    "body-parser": "^1.12.4",
+    "express": "^4.12.4",
+    "jsonschema": "^1.0.1",
+    "nedb": "^1.1.2",
+    "ws": "^0.7.2"
+  }
+}
