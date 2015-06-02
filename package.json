@@ -1,5 +1,4 @@
 {
-  "main": "main.js",
   "devDependencies": {
     "electron-prebuilt": "^0.26.0",
     "flatten-packages": "^0.1.4"
