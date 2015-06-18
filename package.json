@@ -1,6 +1,6 @@
 {
   "name": "reflectproject",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "main.js",
   "dependencies": {
     "checkerboard": "^0.1.0",
