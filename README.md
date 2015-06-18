@@ -1,4 +1,8 @@
-# Start
+## About
+
+Reflect-Project is a platform for managing multiple multitouch devices in a classroom. If you are one teacher with twenty-five kids and anywhere from a handful of devices to one-to-one pairings, how do you control each device without physically being at each one? RP is the solution - it allows a teacher to send apps and content to devices, get feedback on student's progress, and project device contents to a big screen, all with one or two taps.
+
+## Start
 
     npm install reflectproject
     node main.js
@@ -11,7 +15,7 @@ Select a device to get started. You'll see a blank screen.
 
 ## Console
 
-When a device is online, it lights up. Drag an app from the dock to a device to launch it. You'll see the app pop up on the device.
+Select a classroom to get started. The window represents an overhead visualization of the classroom. When a device is online, it lights up. Drag an app from the dock to a device to launch it. You'll see the app pop up on the device. You can 'freeze' a device (prevent interaction), clear it and the coolest thing - project its contents to another device - accessing the menu by clicking the screen.
 
 ## Demo
 
@@ -28,3 +32,11 @@ An app module has one export: function startApp(cb, parentElement). Mount your a
 cb refers to a [checkerboard](https://github.com/gregoryfabry/checkerboard) object. When you write an app, you want to store your entire apps state on the state.global object. The global object is shared between all clients in a classroom that are running your app, so it's useful to create an object that will hold each devices state.
 
 As long as you keep your app's state in checkerboard, it will automatically be synced with the classroom. Try projecting your app to another device, or opening the same device in two windows, and watch them sync up.
+
+## The future
+
+Obviously this readme is a bit light - a more thorough treatment/API is in order. Currently RP is in heavy development, but I am the only programmer on the team right now. The focus is iteration and functionality, so while everything works pretty well, it isn't production-ready (e.g. no authentication, security, etc.) Contributing: right now the most useful thing to do would be to develop apps that can demonstrate the functionality of the platform. Contributions to the platform itself are more than welcome; apologies in advance for the sparsely commented code. Please send me an email if you have any questions, I would be eager to talk to other developers about this project.
+
+## Thank you
+
+An honest thank you to all who are looking at or considering contributing to this project - you are actively making a difference.
