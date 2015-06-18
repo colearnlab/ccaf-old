@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="/lib/mithril.js"></script>
+  <script src="/lib/interact-1.2.4.js"></script>
+  <script src="/lib/q.min.js"></script>
+  <script src="/node_modules/checkerboard/lib/checkerboard.js"></script>
+  <script src="/lib/require.js"></script>
+
+  <link rel="stylesheet" href="/lib/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <script src="controllers/ClassroomSelect.js"></script>
+  <script src="controllers/App.js"></script>
+  <script src="controllers/Home.js"></script>
+
+  <script src="transform.js"></script>
+
+  <script type="text/javascript">
+    window.addEventListener('resize', m.redraw);
+    var stm, conn, associated = false;
+    var classrooms = [];
+    var classroom;
+
+    window.onload = function() {
+      conn = new WebSocket('ws://' + ('location' in window ? window.location.hostname : 'localhost') + ':904/');
+
+      conn.onopen = function() {
+        stm = new Checkerboard(conn);
+
+        m.route.mode = 'hash';
+        m.route(document.getElementById('page'), '/', {
+          '/': ClassroomSelect,
+          ':classroom': App,
+          ':classroom/:subpage': App
+        });
+
+        m.startComputation();
+        stm.on('ready', function(state) {
+          classrooms = state('classrooms');
+          m.endComputation();
+
+          stm.sync(100);
+        });
+
+        stm.on('change', function(state) {
+          if (associated)
+            classroom = state;
+          m.redraw();
+        });
+      };
+    };
+  </script>
+</head>
+<body>
+<div id="container" class="container-fluid">
+  <div id="page"></div>
+</div>
+</body>
+</html>

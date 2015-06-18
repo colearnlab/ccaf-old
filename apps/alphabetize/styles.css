@@ -1,0 +1,62 @@
+html, body {
+  background-color: #222222;
+  overflow: hidden;
+  height: 100%;
+  padding: 18pt;
+
+  font-size: 48pt;
+}
+
+#app {
+  min-height: 100%;
+}
+
+#allWords {
+  color: white;
+  width: 100%;
+}
+
+.directive {
+  text-align: center;
+  font-size: 60pt;
+}
+
+.wordHolder {
+  display: block;
+  background-color: #555555;
+  border: 5px #555555 solid;
+  border-radius: 10pt;
+  width: 300pt;
+  margin: 0 auto;
+  margin-top: 10pt;
+}
+
+.word {
+  z-index: 1;
+  text-align: center;
+  width: 300pt;
+  position: absolute;
+}
+
+.holderActive {
+  background-color: #888888;
+  color: #888888;
+  border: 5px white dashed;
+}
+
+.holderDropped {
+  background-color: #888888;
+  color: #888888;
+  border: 5px white solid;
+}
+
+.wordActive {
+  position: absolute;
+  color: white;
+  border: 5px #555555 solid;
+  border-radius: 10pt;
+}
+
+.wordDropped {
+  border: none;
+}

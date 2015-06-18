@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="/lib/mithril.js"></script>
+  <script src="/lib/q.min.js"></script>
+  <script src="/node_modules/checkerboard/lib/checkerboard.js"></script>
+  <script src="/lib/require.js"></script>
+  <style>
+  .frozen { opacity: 0.25; pointer-events: none; }
+  * {cursor: none;}
+  body {
+    -webkit-backface-visibility: hidden;
+  }
+  html, body {
+    background-color: #222222;
+    overflow: hidden;
+    height: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  #app {
+    height: 100%; width: 100%;
+  }
+  iframe {
+    border: none; height: 100%; width: 100%; min-height: 100%;
+  }
+  </style>
+
+  <link rel="stylesheet" href="/lib/css/bootstrap.min.css" />
+
+  <script type="text/javascript">
+    // apps are implemented very simply.
+    // they are stored in /apps/appId. the file icon contains their icon. main.js is a require module
+    // that exports start(stm) and onchange(state) functions. apps place their content in the #app div.
+    // they can load css using css(url) and javascript using require([url], function(module) {}).
+    // apps can find their appId in the state root.
+
+    var stm, conn, associated = false;
+    var classrooms = [];
+
+    function css(url) {
+      var link = document.createElement("link");
+      link.type = "text/css";
+      link.rel = "stylesheet";
+      link.href = url;
+      link.classList.add('app-css');
+      document.getElementsByTagName("head")[0].appendChild(link);
+    }
+
+    function reset() {
+      [].slice.call(document.getElementsByClassName('app-css')).forEach(function(link) {
+        link.parentNode.removeChild(link);
+      });
+      var el = document.getElementById('app');
+      if (el !== null)
+        el.parentNode.removeChild(el);
+      el = document.createElement('div');
+      el.id = 'app';
+      return el;
+    }
+
+    window.onload = function() {
+      (function() {
+        var pageDirectionX;
+
+        document.addEventListener('touchstart', function(e){
+            pageDirectionX = e.changedTouches[0].pageX;
+        });
+
+        document.addEventListener('touchmove', function(e){
+            if (pageDirectionX !== e.changedTouches[0].pageX)
+                e.preventDefault();
+        });
+      }());
+
+      document.onmousedown = function (event) {
+        if(event.button == 2)
+           return false;
+      }
+
+      conn = new WebSocket('ws://' + ('location' in window ? window.location.hostname : 'localhost') + ':904/');
+
+      conn.onopen = function() {
+        stm = new Checkerboard(conn);
+
+        m.route.mode = 'hash';
+        m.route(document.getElementById('app'), '/', {
+          '/': ClassroomSelect,
+          ':classroom': DeviceSelect,
+          ':classroom/:device': Home
+        });
+
+        m.startComputation();
+        stm.on('ready', function(state) {
+          classrooms = state('classrooms');
+          m.endComputation();
+
+          stm.sync(100);
+        });
+
+        var savedApp;
+        var project;
+        stm.on('change', function (state) {
+          m.startComputation();
+
+          var device = state.device;
+
+          if (typeof device === 'undefined') {
+            m.endComputation();
+            return;
+          }
+
+          if (device('frozen'))
+            document.getElementsByTagName('body')[0].classList.add('frozen');
+          else
+            document.getElementsByTagName('body')[0].classList.remove('frozen');
+
+          if (typeof device('project') !== 'undefined' && device('project') !== project) {
+            project = device('project');
+            var el = reset();
+            var frame = document.createElement('iframe');
+            frame.src = location.origin + '/#' + m.route.param('classroom') + '/' + device('project');
+            el.appendChild(frame);
+            document.body.appendChild(el);
+          }
+          else if (device('app') !== savedApp) {
+            if (typeof savedApp !== 'undefined')
+              location.reload();
+
+            savedApp = device('app');
+            var el = reset();
+
+            if (typeof device('app') !== 'undefined') {
+              require(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
+                document.body.appendChild(el);
+                app.startApp(stm, el);
+              });
+            }
+          }
+          else if (typeof device('project') === 'undefined' && typeof device('app') === 'undefined') {
+            project = undefined;
+            app = undefined;
+            reset();
+          }
+
+          m.endComputation();
+        });
+      };
+    }
+
+    var ClassroomSelect = {
+      'view': function(ctrl) {
+        return (
+          m('div.row', [
+            m('div.col-md-4.col-md-offset-4', [
+              m('h4', ['Select a classroom']),
+              m('div.list-group', [
+                classrooms.map(function(classroom) {
+                  return m('a.list-group-item', {'href': classroom.id, 'config': m.route}, classroom.props.name)
+                })
+              ])
+            ])
+          ])
+        );
+      }
+    };
+
+    var DeviceSelect = {
+      'view': function(ctrl) {
+        var classroom = classrooms[classrooms.map(function(c) { return c.id; }).indexOf(parseInt(m.route.param('classroom')))] || {};
+        return (
+          m('div.row', [
+            m('div.col-md-4.col-md-offset-4', [
+              m('h4', ['Select a device']),
+              m('div.list-group', [
+                (classroom.devices || []).map(function(device) {
+                  return m('a.list-group-item', {'href': m.route.param('classroom') + '/' + device.id, 'config': m.route}, device.name)
+                })
+              ])
+            ])
+          ])
+        );
+      }
+    };
+
+    var Home = {
+      controller: function() {
+        var interval = setInterval(function() {
+          if (conn.readyState === conn.OPEN) {
+            clearInterval(interval);
+            stm.send('data-associate', {'classroom': m.route.param('classroom'), 'device': m.route.param('device')});
+            associated = true;
+          }
+        }, 100);
+      }
+    };
+  </script>
+</head>
+<body oncontextmenu="return false">
+<div id="app"></div>
+</body>
+</html>

@@ -1,9 +1,9 @@
 {
-  "devDependencies": {
-    "electron-prebuilt": "^0.26.0",
-    "flatten-packages": "^0.1.4"
-  },
+  "name": "ReflectProject",
+  "version": "0.1.0",
+  "main": "main.js",
   "dependencies": {
+    "checkerboard": "^0.1.0",
     "body-parser": "^1.12.4",
     "express": "^4.12.4",
     "jsonschema": "^1.0.1",
