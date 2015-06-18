@@ -3,7 +3,7 @@
     npm install reflectproject
     node main.js
     
-Navigate to http://localhost:1867/ in one window (or http://YOUR_IP:1867/ on another device) for you client device and http://localhost:1867/console on your main device.
+Navigate to http://localhost:1867/ in one window (or http://YOUR_IP:1867/ on another device) for your client device and http://localhost:1867/console on your main device.
 
 ## Client
 
