@@ -16,7 +16,7 @@ if (typeof db.config !== 'object' || db.config === null)
   db.config = {};
 
 if (typeof db.config.ports !== 'object' || db.config.ports === null)
-  db.config.ports = {'http': 1867, 'ws': 904};
+  db.config.ports = {'http': 1867, 'ws': 1808};
 
 if (typeof db.classrooms !== 'object' || db.classrooms === null)
     db.classrooms = [];
