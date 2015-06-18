@@ -10,8 +10,8 @@ define(function() {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
       return;
 
-    if (typeof paths[path] === 'undefined') {
-      paths[path] = {'X': [], 'Y': [], 'drag': []}
+    if (typeof paths[path] === 'undefined' || paths[path] === null) {
+      paths[path] = {'X': [], 'Y': [], 'drag': []};
       lastDraw[path] = 0;
     }
     paths[path].X.push(x);
@@ -27,6 +27,8 @@ define(function() {
     ctx.lineWidth = 5;
 
     paths.forEach(function(path, index) {
+      if (path === null)
+        return;
       for (var i = lastDraw[index]; i < path.X.length; i++) {
         ctx.beginPath();
 
