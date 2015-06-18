@@ -2,7 +2,7 @@ define(function() {
   var exports = {};
   var cb, parentElement;
 
-  var wordlist, currentWords, correct;
+  var wordlist, currentWords, alphabetizedWords, orderedWords, correct = false;
   var loaded;
   exports.startApp = function(_cb, _parentElement) {
     cb = _cb;
@@ -62,11 +62,32 @@ define(function() {
     if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined') {
       cb.try(function(state) {
         generateNewWords(state);
+      }).then(function() {
+        alphabetizedWords = undefined;
+        correct = false;
       });
       return;
     }
 
     currentWords = state.global.deviceState[state.device('id')]('currentWords');
+
+    if (typeof alphabetizedWords === 'undefined') {
+      alphabetizedWords = [];
+      currentWords.forEach(function(w) {
+        alphabetizedWords.push(w);
+      });
+      alphabetizedWords.sort(function(a, b) {
+        if (a.text < b.text) return -1;
+        if (a.text > b.text) return 1;
+        return 0;
+      });
+    }
+
+    correct = true;
+    currentWords.forEach(function(w, index) {
+      if (typeof w.holderDropped === 'undefined' || w.holderDropped === false || w.holderDropped !== alphabetizedWords[index].index)
+        correct = false;
+    });
 
     m.render(parentElement, Root);
   }
@@ -95,17 +116,12 @@ define(function() {
 
   var Root = {
     'view': function(ctrl) {
-      var orderedWords = currentWords.reduce(function(acc, cur) {
-        acc[cur.index] = cur;
-        return acc;
-      }, []);
-
       return (
         m('div', [
-          m('div#allWords', [
+          m('div#allWords' + (correct ? '.dim' : ''), [
             m('div.directive', 'Alphabetize the words!'),
-            orderedWords.map(function(cur, index) {
-              return m('div.wordHolder', {
+            currentWords.map(function(cur, index) {
+              return m('div.wordHolder' + (cur.holderActive ? '.holderActive' : cur.holderDropped !== false && cur.holderDropped >= 0 ? '.holderDropped' : ''), {
                 'data-index': index
               }, [
                 m.trust('&#8203;'),
@@ -117,6 +133,21 @@ define(function() {
                 }, [cur.text])
               ]);
             })
+          ]),
+          m('div' + (correct ? '#success' : '.noshow'), [
+            'Congratulations! ',
+            m('button', {
+              'onclick': function(e) {
+                cb.try(function(state) {
+                  cb.try(function(state) {
+                    generateNewWords(state);
+                  }).then(function() {
+                    alphabetizedWords = undefined;
+                    correct = false;
+                  });
+               });
+              }
+            }, ['Try some more'])
           ])
         ])
       );
@@ -155,17 +186,38 @@ define(function() {
         'accept': '.word',
         'overlap': 0.75,
         'ondragenter': function(e) {
-          e.target.classList.add('activeDrop');
+          cb.try(function(state) {
+            var words = state.global.deviceState[state.device('id')].currentWords;
+            var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
+            if (typeof holder('holderDropped') === 'undefined' || holder('holderDropped') === false) {
+              holder('holderActive', true);
+              e.target.classList.add('holderActive');
+            }
+          });
         },
         'ondragleave': function(e) {
-          e.target.classList.remove('activeDrop');
-          e.target.classList.remove('dropped');
-          e.relatedTarget.classList.remove('answerDrop');
+          cb.try(function(state) {
+            var words = state.global.deviceState[state.device('id')].currentWords;
+            var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
+            holder('holderActive', false);
+            e.target.classList.remove('holderActive');
+            if (holder('holderDropped') === parseInt(e.relatedTarget.getAttribute('data-index'))) {
+              e.target.classList.remove('holderDropped');
+              holder('holderDropped', false);
+            }
+          });
         },
         'ondrop': function(e) {
-          e.target.classList.remove('activeDrop');
-          e.target.classList.add('dropped');
-          e.relatedTarget.classList.add('answerDrop');
+          cb.try(function(state) {
+            var words = state.global.deviceState[state.device('id')].currentWords;
+            var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
+            if (typeof holder('holderDropped') === 'undefined' || holder('holderDropped') === false) {
+              holder('holderActive', false);
+              holder('holderDropped', parseInt(e.relatedTarget.getAttribute('data-index')));
+              e.target.classList.remove('holderActive');
+              e.target.classList.add('holderDropped');
+            }
+          });
         },
       });
   });

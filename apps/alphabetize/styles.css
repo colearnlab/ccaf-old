@@ -33,6 +33,7 @@ html, body {
 
 .word {
   z-index: 1;
+  color: white;
   text-align: center;
   width: 300pt;
   position: absolute;
@@ -59,4 +60,28 @@ html, body {
 
 .wordDropped {
   border: none;
+}
+
+.dim {
+  opacity: 0.5;
+}
+
+#success {
+  position: absolute;
+  left: 10%;
+  width: 80%;
+  top: 50%;
+  color: white;
+  text-align: center;
+}
+
+#success button {
+  visibility: visible;
+  margin-left: 350pt;
+  color: black;
+  border-radius: 10pt;
+}
+
+.noshow {
+  visibility: collapse;
 }

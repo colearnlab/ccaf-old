@@ -202,6 +202,9 @@ function exit() {
   });
 
   saveDB();
+  process.exit();
 }
 
 process.on('exit', exit);
+process.on('SIGINT', exit);
+process.on('uncaughtException', exit);

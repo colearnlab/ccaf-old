@@ -137,11 +137,13 @@
             if (typeof device('app') !== 'undefined') {
               require(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
                 document.body.appendChild(el);
+                document.body.style.backgroundColor = '';
                 app.startApp(stm, el);
               });
             }
           }
           else if (typeof device('project') === 'undefined' && typeof device('app') === 'undefined') {
+            document.body.style.backgroundColor = state.device('color');
             project = undefined;
             app = undefined;
             reset();
