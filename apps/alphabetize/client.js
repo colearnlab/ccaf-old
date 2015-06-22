@@ -2,7 +2,7 @@ define(function() {
   var exports = {};
   var cb, parentElement;
 
-  var wordlist, currentWords, alphabetizedWords, orderedWords, correct = false;
+  var wordlist, currentWords, alphabetizedWords, orderedWords, correct;
   var loaded;
   exports.startApp = function(_cb, _parentElement) {
     cb = _cb;
@@ -13,6 +13,10 @@ define(function() {
       if (!loaded)
         return;
 
+      propegateChanges(state);
+    });
+
+    cb.on('attempt', function(state) {
       propegateChanges(state);
     });
 
@@ -27,9 +31,10 @@ define(function() {
           state.global.deviceState[state.device('id')]('wordlist', 'animals');
         if (typeof state.global.deviceState[state.device('id')]('numToGenerate') === 'undefined')
           state.global.deviceState[state.device('id')]('numToGenerate', 6);
-        if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined') {
+        if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined')
           generateNewWords(state);
-        }
+        if (typeof state.global.deviceState[state.device('id')]('correct') === 'undefined')
+          state.global.deviceState[state.device('id')]('correct', false);
       }).then(function(state) {
         loaded = true;
 
@@ -56,6 +61,7 @@ define(function() {
     newWords = newWords.map(function(word, index) { return {'text': word, 'index': index}; });
 
     self('currentWords', newWords);
+    self('correct', false);
   }
 
   function propegateChanges(state) {
@@ -70,6 +76,7 @@ define(function() {
     }
 
     currentWords = state.global.deviceState[state.device('id')]('currentWords');
+    correct = state.global.deviceState[state.device('id')]('correct');
 
     if (typeof alphabetizedWords === 'undefined') {
       alphabetizedWords = [];
@@ -82,12 +89,6 @@ define(function() {
         return 0;
       });
     }
-
-    correct = true;
-    currentWords.forEach(function(w, index) {
-      if (typeof w.holderDropped === 'undefined' || w.holderDropped === false || w.holderDropped !== alphabetizedWords[index].index)
-        correct = false;
-    });
 
     m.render(parentElement, Root);
   }
@@ -141,7 +142,7 @@ define(function() {
                 cb.try(function(state) {
                   cb.try(function(state) {
                     generateNewWords(state);
-                  }).then(function() {
+                  }).then(function(state) {
                     alphabetizedWords = undefined;
                     correct = false;
                   });
@@ -214,6 +215,13 @@ define(function() {
             if (typeof holder('holderDropped') === 'undefined' || holder('holderDropped') === false) {
               holder('holderActive', false);
               holder('holderDropped', parseInt(e.relatedTarget.getAttribute('data-index')));
+
+              state.global.deviceState[state.device('id')]('correct', true);
+//              currentWords.forEach(function(w, index) {
+//                if (typeof w.holderDropped === 'undefined' || w.holderDropped === false || w.holderDropped !== alphabetizedWords[index].index)
+//                  state.global.deviceState[state.device('id')]('correct', false);
+//              });
+
               e.target.classList.remove('holderActive');
               e.target.classList.add('holderDropped');
             }

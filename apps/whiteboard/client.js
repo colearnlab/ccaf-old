@@ -27,8 +27,12 @@ define(function() {
     ctx.lineWidth = 5;
 
     paths.forEach(function(path, index) {
-      if (path === null)
+      if (path === null || typeof path === 'undefined')
         return;
+
+
+          if (!('X' in path))
+            debugger;
       for (var i = lastDraw[index]; i < path.X.length; i++) {
         ctx.beginPath();
 

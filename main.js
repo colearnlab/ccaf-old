@@ -66,6 +66,9 @@ checkerboard.on('open', function(conn, message) {
           return toReturn;
         },
         'patch': {},
+        'apply': function() {
+
+        }
       };
     };
   };
@@ -74,35 +77,34 @@ checkerboard.on('open', function(conn, message) {
 checkerboard.on('data-associate', function(conn, message) {
   assoc[conn.uuid] = {'classroom': message.classroom, 'device': message.device, 'conn': conn};
 
-  if (typeof device !== 'undefined')
-    device('connected', true);
-
   conn.state = function(state) {
-    var classroom = state.classrooms[state('classrooms').map(function(c) { return c.id; }).indexOf(parseInt(message.classroom))];
-    var device = typeof classroom !== 'undefined' ? classroom.devices[classroom('devices').map(function(d) { return d.id; }).indexOf(parseInt(message.device))] : undefined;
+    return function() {
+      var classroom = state.classrooms[state('classrooms').map(function(c) { return c.id; }).indexOf(parseInt(message.classroom))];
+      if (typeof classroom.appRoot === 'undefined')
+        classroom('appRoot', {});
 
-    if (typeof message.device !== 'undefined') {
-      return function() {
-        var patch = {'device': device().patch, 'global': (typeof device('app') !== 'undefined' ? classroom.appRoot[device('app')].merge() : {}).patch};
+      if (typeof message.device !== 'undefined') {
+        var deviceIndex = classroom('devices').map(function(d) { return d.id; }).indexOf(parseInt(message.device));
+        var device = typeof classroom !== 'undefined' ? classroom.devices[deviceIndex] : undefined;
+
+        device('connected', true);
+
+        if (typeof classroom.appRoot[device('app')] === 'undefined')
+          classroom.appRoot(device('app'), {});
+
         return {
           'merge': function() {
-            return {'device': device().merge(), 'global': typeof device('app') !== 'undefined' ? classroom.appRoot[device('app')].merge() : {}};
+            var k = {'device': device().merge(), 'global': classroom.appRoot[device('app')]().merge(), 'app': getApps()[device('app')]};
+            return k;
           },
-          'patch': patch
+          'patch': {'device': device().patch, 'global': classroom.appRoot[device('app')]().patch, 'app': getApps()[device('app')]},
+          'apply': function(toApply) {
+            classroom.appRoot[device('app')]().apply(toApply.global);
+            device().apply(toApply.device);
+          }
         };
-      };
-    }
-    else {
-      return function() {
-        var patch = 0;
-        return {
-          'merge': function() {
-            return {};
-          },
-          'diff': {}
-        };
-      };
-    }
+      }
+    };
   };
   conn.refresh();
 });
