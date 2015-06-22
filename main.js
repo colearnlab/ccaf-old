@@ -21,40 +21,9 @@ if (typeof db.config.ports !== 'object' || db.config.ports === null)
 if (typeof db.classrooms !== 'object' || db.classrooms === null)
     db.classrooms = [];
 
-// models
-function Classroom(args) {
-  for (var prop in args)
-    this[prop] = args[prop];
-
-  this.props = {
-    'name': 'props' in args ? args.props.name || '' : '',
-    'deviceIndex': 'props' in args ? args.props.deviceIndex || 0 : 0
-  };
-  this.id = args.id;
-  this.devices = args.devices || [];
-  this.appRoot = args.appRoot || {};
-}
-
-function Device(args) {
-  for (var prop in args)
-    this[prop] = args[prop];
-
-  this.name = args.name || 'New device';
-  this.id = args.id;
-  this.color = args.color || 'green';
-  this.screen = {
-    'height': 'screen' in args ? args.screen.height || 1 : 1,
-    'width': 'screen' in args ? args.screen.width || 1 : 1
-  };
-  this.location = {
-    'x': 'location' in args ? args.location.x || 0 : 0,
-    'y': 'location' in args ? args.location.y || 0 : 0,
-    'angle': 'location' in args ? args.location.angle || 0 : 0
-  };
-}
-
 var assoc = {};
 var checkerboard = new (require('checkerboard')).Server(db.config.ports.ws, db);
+var State = checkerboard.state;
 
 var express = require('express'),
     http = express();
@@ -69,33 +38,6 @@ http.get('/', express.static(path.resolve(__dirname, 'client')));
 http.use('/', express.static(path.resolve(__dirname)));
 
 http.listen(db.config.ports.http);
-
-function normalize(state) {
-  if (typeof state.classroomIndex === 'undefined')
-    state.classroomIndex = 0;
-
-  state.classrooms.forEach(function(classroom, index) {
-    classroom = new Classroom(classroom);
-
-    if (typeof classroom.id === 'undefined')
-      classroom.id = state.classroomIndex++;
-
-    classroom.devices.forEach(function(device, index) {
-      device = new Device(device);
-
-      if (typeof device.id === 'undefined')
-        device.id = classroom.props.deviceIndex++;
-
-      if (typeof device.app !== 'undefined' && !(device.app in classroom.appRoot))
-        classroom.appRoot[device.app] = {};
-
-      classroom.devices[index] = device;
-    });
-
-    state.classrooms[index] = classroom;
-
-  });
-}
 
 function getApps() {
   var toReturn = {};
@@ -112,55 +54,57 @@ function getApps() {
 checkerboard.on('open', function(conn, message) {
   assoc[conn.uuid] = {'classroom': undefined, 'device': undefined};
   conn.state = function(state) {
-    normalize(state);
-
     var toReturn = {'classrooms': []};
 
-    state.classrooms.forEach(function(classroom) {
+    state('classrooms').forEach(function(classroom) {
       toReturn.classrooms.push({'id': classroom.id, 'props': classroom.props, 'devices': classroom.devices});
     });
 
-    return toReturn;
+    return function() {
+      return {
+        'merge': function() {
+          return toReturn;
+        },
+        'patch': {},
+      };
+    };
   };
 });
 
 checkerboard.on('data-associate', function(conn, message) {
   assoc[conn.uuid] = {'classroom': message.classroom, 'device': message.device, 'conn': conn};
-  var classroom = db.classrooms[db.classrooms.map(function(c) { return c.id; }).indexOf(parseInt(message.classroom))];
-  var device = typeof classroom !== 'undefined' ? classroom.devices[classroom.devices.map(function(d) { return d.id; }).indexOf(parseInt(message.device))] : undefined;
 
   if (typeof device !== 'undefined')
-    device.connected = true;
+    device('connected', true);
 
   conn.state = function(state) {
-    normalize(state);
-
-    classroom = state.classrooms[db.classrooms.map(function(c) { return c.id; }).indexOf(parseInt(message.classroom))];
-    device = typeof classroom !== 'undefined' ? classroom.devices[classroom.devices.map(function(d) { return d.id; }).indexOf(parseInt(message.device))] : undefined;
-
-    if (typeof classroom === 'undefined')
-      return {};
+    var classroom = state.classrooms[state('classrooms').map(function(c) { return c.id; }).indexOf(parseInt(message.classroom))];
+    var device = typeof classroom !== 'undefined' ? classroom.devices[classroom('devices').map(function(d) { return d.id; }).indexOf(parseInt(message.device))] : undefined;
 
     if (typeof message.device !== 'undefined') {
-      if (typeof device === 'undefined')
-        return {};
-
-      return {'device': device, 'global': typeof device.app !== 'undefined' ? classroom.appRoot[device.app] : {}, 'app': typeof device.app !== 'undefined' ? getApps()[device.app] : undefined};
+      return function() {
+        var patch = {'device': device().patch, 'global': (typeof device('app') !== 'undefined' ? classroom.appRoot[device('app')].merge() : {}).patch};
+        return {
+          'merge': function() {
+            return {'device': device().merge(), 'global': typeof device('app') !== 'undefined' ? classroom.appRoot[device('app')].merge() : {}};
+          },
+          'patch': patch
+        };
+      };
     }
     else {
-      var toReturn = {};
-      for (var prop in classroom)
-        toReturn[prop] = classroom[prop];
-
-      toReturn.apps = getApps();
-      return toReturn;
+      return function() {
+        var patch = 0;
+        return {
+          'merge': function() {
+            return {};
+          },
+          'diff': {}
+        };
+      };
     }
   };
-
-  Object.keys(assoc).forEach(function(key) {
-    if (assoc[key].classroom === message.classroom)
-      assoc[key].conn.overwriteState();
-  });
+  conn.refresh();
 });
 
 checkerboard.on('close', function(conn) {
@@ -207,4 +151,6 @@ function exit() {
 
 process.on('exit', exit);
 process.on('SIGINT', exit);
-process.on('uncaughtException', exit);
+process.on('uncaughtException', function(err) {
+  console.log(err.stack);
+});
