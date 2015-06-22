@@ -30,10 +30,7 @@ define(function() {
       if (path === null || typeof path === 'undefined')
         return;
 
-
-          if (!('X' in path))
-            debugger;
-      for (var i = lastDraw[index]; i < path.X.length; i++) {
+      for (var i = (lastDraw[index] || 0); i < path.X.length; i++) {
         ctx.beginPath();
 
         if (path.drag[i] && i) {
