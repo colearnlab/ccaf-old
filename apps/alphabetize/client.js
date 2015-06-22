@@ -16,10 +16,6 @@ define(function() {
       propegateChanges(state);
     });
 
-    cb.on('attempt', function(state) {
-      propegateChanges(state);
-    });
-
     require(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
       cb.try(function(state) {

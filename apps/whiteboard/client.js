@@ -68,46 +68,51 @@ define(function() {
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     canvas.onmousedown = function(e) {
-      paint[0] = true;
-      addToPath(0, e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
-    }
+      paint[0] = paths.length;
+      addToPath(paint[0], e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
+    };
 
     canvas.onmousemove = function(e) {
-      if (paint[0])
-        addToPath(0, e.pageX - this.offsetLeft, e.pageY - this.offsetTop, true);
-    }
+      if (paint[0] || paint[0] === 0)
+        addToPath(paint[0], e.pageX - this.offsetLeft, e.pageY - this.offsetTop, true);
+    };
 
     canvas.onmouseleave = canvas.onmouseup = function(e) {
-      paint[0] = false;
+      var p = paint[0];
+      if (paint[0] || paint[0] === 0)
+        cb.try(function(state) {
+          state.global.deviceState[state.device('id')].paths(p, paths[p]);
+        });
 
-      cb.try(function(state) {
-        state.global.deviceState[state.device('id')]('paths', paths);
-      });
-    }
+      paint[0] = false;
+    };
 
     canvas.ontouchstart = function(e) {
       for (var i = 0; i < e.changedTouches.length; i++) {
-        paint[e.changedTouches[i].identifier + 1] = true;
-        addToPath(e.changedTouches[i].identifier + 1, e.changedTouches[i].pageX - this.offsetLeft, e.changedTouches[i].pageY - this.offsetTop);
+        paint[e.changedTouches[i].identifier + 1] = paths.length + i;
+        addToPath(paint[e.changedTouches[i].identifier + 1], e.changedTouches[i].pageX - this.offsetLeft, e.changedTouches[i].pageY - this.offsetTop);
       }
-    }
+    };
 
     canvas.ontouchmove = function(e) {
       for (var i = 0; i < e.changedTouches.length; i++) {
-        if (paint[e.changedTouches[i].identifier + 1])
-          addToPath(e.changedTouches[i].identifier + 1, e.changedTouches[i].pageX - this.offsetLeft, e.changedTouches[i].pageY - this.offsetTop, true);
+        if (paint[e.changedTouches[i].identifier + 1] || paint[e.changedTouches[i].identifier + 1] === 0)
+          addToPath(paint[e.changedTouches[i].identifier + 1], e.changedTouches[i].pageX - this.offsetLeft, e.changedTouches[i].pageY - this.offsetTop, true);
       }
-    }
+    };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
+      var p = [];
       for (var i = 0; i < e.changedTouches.length; i++) {
+        p[e.changedTouches[i].identifier + 1] = paint[e.changedTouches[i].identifier + 1];
         paint[e.changedTouches[i].identifier + 1] = false;
       }
 
       cb.try(function(state) {
-        state.global.deviceState[state.device('id')]('paths', paths);
+        for (var i = 0; i < e.changedTouches.length; i++)
+          state.global.deviceState[state.device('id')].paths(p[e.changedTouches[i].identifier + 1], paths[p[e.changedTouches[i].identifier + 1]]);
       });
-    }
+    };
 
     cb.try(function(state) {
       if (typeof state.global('deviceState') === 'undefined')
