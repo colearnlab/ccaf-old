@@ -4,7 +4,7 @@ define(function() {
 
   var loaded;
 
-  var canvas, ctx, paint, paths;
+  var canvas, ctx, paint, paths, lastDraw, version;
 
   function addToPath(path, x, y, drag) {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
@@ -64,9 +64,6 @@ define(function() {
     paint = [];
     lastDraw = [];
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
     canvas.onmousedown = function(e) {
       paint[0] = paths.length;
       addToPath(paint[0], e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
@@ -121,35 +118,35 @@ define(function() {
         state.global.deviceState(state.device('id'), {});
       if (typeof state.global.deviceState[state.device('id')]('paths') === 'undefined')
         state.global.deviceState[state.device('id')]('paths', []);
+      if (typeof state.global.deviceState[state.device('id')]('version') === 'undefined')
+        state.global.deviceState[state.device('id')]('version', 0);
     }).then(function(state) {
       loaded = true;
-
-      paths = state.global.deviceState[state.device('id')]('paths');
-      for (var i = 0; i < paths.length; i++)
-        lastDraw[i] = 0;
-      redraw(paths);
+      update(state);
     }).done();
 
-    cb.on('change', function(state) {
-      if (!loaded)
-        return;
-
-      var repaint = true;
-      for (var i = 0; i < paint.length; i++)
-        if (paint[i]) repaint = false;
-
-      if (repaint) {
-        paths = state.global.deviceState[state.device('id')]('paths');
-        redraw(paths);
-      }
-    });
+    cb.on('change', update);
+    cb.on('attempt', update);
 
     parentElement.appendChild(canvas);
-
   };
 
-  function propegateChanges(state) {
+  function update(state) {
+    if (!loaded)
+      return;
 
+    paths = state.global.deviceState[state.device('id')]('paths');
+
+    if (state.global.deviceState[state.device('id')]('version') !== version) {
+      version = state.global.deviceState[state.device('id')]('version');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+      lastDraw = [];
+    }
+
+    redraw(paths);
   }
 
   return exports;

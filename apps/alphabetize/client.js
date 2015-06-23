@@ -9,12 +9,8 @@ define(function() {
     parentElement = _parentElement;
     css('/apps/alphabetize/styles.css');
 
-    cb.on('change', function(state) {
-      if (!loaded)
-        return;
-
-      propegateChanges(state);
-    });
+    cb.on('attempt', propegateChanges);
+    cb.on('change', propegateChanges);
 
     require(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
@@ -213,10 +209,10 @@ define(function() {
               holder('holderDropped', parseInt(e.relatedTarget.getAttribute('data-index')));
 
               state.global.deviceState[state.device('id')]('correct', true);
-//              currentWords.forEach(function(w, index) {
-//                if (typeof w.holderDropped === 'undefined' || w.holderDropped === false || w.holderDropped !== alphabetizedWords[index].index)
-//                  state.global.deviceState[state.device('id')]('correct', false);
-//              });
+              state.global.deviceState[state.device('id')]('currentWords').forEach(function(w, index) {
+                if (typeof w.holderDropped === 'undefined' || w.holderDropped === false || w.holderDropped !== alphabetizedWords[index].index)
+                  state.global.deviceState[state.device('id')]('correct', false);
+              });
 
               e.target.classList.remove('holderActive');
               e.target.classList.add('holderDropped');
