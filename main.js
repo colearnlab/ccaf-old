@@ -134,7 +134,6 @@ checkerboard.on('close', function(conn) {
   var device = classroom.devices[classroom('devices').map(function(d) { return d.id; }).indexOf(parseInt(savedAssoc.device))];
   if (typeof device === 'undefined')
     return;
-  device('connected', false);
 
   var lastDevice = true;
   Object.keys(assoc).forEach(function(key) {
@@ -143,6 +142,8 @@ checkerboard.on('close', function(conn) {
   });
 
   if (lastDevice)
+    device('connected', false);
+    
     Object.keys(assoc).forEach(function(key) {
       if (assoc[key].classroom === savedAssoc.classroom)
         assoc[key].conn.refresh();

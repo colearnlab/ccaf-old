@@ -21,11 +21,13 @@ define(function() {
     redraw(paths);
   }
 
-  function redraw(paths) {
+  function redraw(paths, debug) {
     ctx.strokeStyle = "#df4b26";
     ctx.lineJoin = "round";
     ctx.lineWidth = 5;
 
+    if (debug)
+      console.log(paths);
     paths.forEach(function(path, index) {
       if (path === null || typeof path === 'undefined')
         return;
@@ -99,6 +101,7 @@ define(function() {
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
+      console.log(paths);
       var p = [];
       for (var i = 0; i < e.changedTouches.length; i++) {
         p[e.changedTouches[i].identifier + 1] = paint[e.changedTouches[i].identifier + 1];
@@ -126,7 +129,12 @@ define(function() {
     }).done();
 
     cb.on('change', update);
-    cb.on('attempt', update);
+    cb.on('attempt', function() {
+      if (state.global.deviceState[state.device('id')]('version') !== version) {
+        version = state.global.deviceState[state.device('id')]('version');
+        clearScreen();
+      }
+    });
 
     parentElement.appendChild(canvas);
   };
@@ -139,14 +147,17 @@ define(function() {
 
     if (state.global.deviceState[state.device('id')]('version') !== version) {
       version = state.global.deviceState[state.device('id')]('version');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-      lastDraw = [];
+      clearScreen();
     }
 
     redraw(paths);
+  }
+
+  function clearScreen() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    lastDraw = [];
   }
 
   return exports;
