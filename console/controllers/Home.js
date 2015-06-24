@@ -32,6 +32,7 @@ var Home = (function() {
           m('div#dock', [
             m('ul', Object.keys(classroom('apps')).map(function(path) {
               var app = classroom.apps(path);
+              if (typeof app !== 'undefined')
               return (
                 m('li', [
                   m('span', [app.title]),

@@ -89,37 +89,52 @@ checkerboard.on('data-associate', function(conn, message) {
 
         device('connected', true);
 
-        if (typeof classroom.appRoot[device('app')] === 'undefined')
+        if (typeof classroom.appRoot[device('app')] === 'undefined' && typeof device('app') !== 'undefined')
           classroom.appRoot(device('app'), {});
 
         return {
           'merge': function() {
-            var k = {'device': device().merge(), 'global': classroom.appRoot[device('app')]().merge(), 'app': getApps()[device('app')]};
-            return k;
+            return {'device': device().merge(), 'global': device('app') in classroom.appRoot ? classroom.appRoot[device('app')]().merge() : {}, 'app': getApps()[device('app')]};
           },
-          'patch': {'device': device().patch, 'global': classroom.appRoot[device('app')]().patch, 'app': getApps()[device('app')]},
+          'patch': {'device': device().patch, 'global': device('app') in classroom.appRoot ? classroom.appRoot[device('app')]().patch : {}, 'app': getApps()[device('app')]},
           'apply': function(toApply) {
-            classroom.appRoot[device('app')]().apply(toApply.global);
+            if (device('app') in classroom.appRoot)
+              classroom.appRoot[device('app')]().apply(toApply.global);
             device().apply(toApply.device);
           }
+        };
+      }
+      else {
+        return {
+          'merge': function() {
+            var merged = classroom().merge();
+            merged.apps = getApps();
+            return merged;
+          },
+          'patch': classroom().patch,
+          'apply': classroom().apply
         };
       }
     };
   };
   conn.refresh();
+  Object.keys(assoc).forEach(function(key) {
+    if (assoc[key].classroom === message.classroom && typeof assoc[key].device === 'undefined')
+      assoc[key].conn.refresh();
+  });
 });
 
 checkerboard.on('close', function(conn) {
   var savedAssoc = assoc[conn.uuid];
   delete assoc[conn.uuid];
-  var classroom = db.classrooms[db.classrooms.map(function(c) { return c.id; }).indexOf(parseInt(savedAssoc.classroom))];
+  var classroom = checkerboard.state.classrooms[checkerboard.state('classrooms').map(function(c) { return c.id; }).indexOf(parseInt(savedAssoc.classroom))];
   if (typeof classroom === 'undefined')
     return;
 
-  var device = classroom.devices[classroom.devices.map(function(d) { return d.id; }).indexOf(parseInt(savedAssoc.device))];
+  var device = classroom.devices[classroom('devices').map(function(d) { return d.id; }).indexOf(parseInt(savedAssoc.device))];
   if (typeof device === 'undefined')
     return;
-  device.connected = false;
+  device('connected', false);
 
   var lastDevice = true;
   Object.keys(assoc).forEach(function(key) {
@@ -130,7 +145,7 @@ checkerboard.on('close', function(conn) {
   if (lastDevice)
     Object.keys(assoc).forEach(function(key) {
       if (assoc[key].classroom === savedAssoc.classroom)
-        assoc[key].conn.overwriteState();
+        assoc[key].conn.refresh();
     });
 });
 
