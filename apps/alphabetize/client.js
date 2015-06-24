@@ -2,15 +2,18 @@ define(function() {
   var exports = {};
   var cb, parentElement;
 
-  var wordlist, currentWords, alphabetizedWords, orderedWords, correct;
+  var wordlist, currentWordlist, currentWords, alphabetizedWords, orderedWords, correct, generating = true;
   var loaded;
   exports.startApp = function(_cb, _parentElement) {
     cb = _cb;
     parentElement = _parentElement;
     css('/apps/alphabetize/styles.css');
 
-    cb.on('attempt', propegateChanges);
     cb.on('change', propegateChanges);
+    cb.on('attempt', function(state) {
+      if (state.global.deviceState[state.device('id')]('correct') === true)
+        propegateChanges(state);
+    });
 
     require(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
@@ -24,12 +27,10 @@ define(function() {
         if (typeof state.global.deviceState[state.device('id')]('numToGenerate') === 'undefined')
           state.global.deviceState[state.device('id')]('numToGenerate', 6);
         if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined')
-          generateNewWords(state);
-        if (typeof state.global.deviceState[state.device('id')]('correct') === 'undefined')
-          state.global.deviceState[state.device('id')]('correct', false);
+          generating = true;
+
       }).then(function(state) {
         loaded = true;
-
         propegateChanges(state);
       }).done();
     });
@@ -51,24 +52,27 @@ define(function() {
     }
 
     newWords = newWords.map(function(word, index) { return {'text': word, 'index': index}; });
+    currentWordlist = state.global.deviceState[state.device('id')]('wordlist');
 
     self('currentWords', newWords);
-    self('correct', false);
+    correct = self('correct', false);
+    alphabetizedWords = undefined;
   }
 
   function propegateChanges(state) {
-    if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined') {
+    if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined' && generating) {
       cb.try(function(state) {
         generateNewWords(state);
-      }).then(function() {
-        alphabetizedWords = undefined;
-        correct = false;
+      }).then(function(state) {
+        propegateChanges(state);
+        generating = false;
       });
       return;
     }
 
     currentWords = state.global.deviceState[state.device('id')]('currentWords');
     correct = state.global.deviceState[state.device('id')]('correct');
+    console.log(currentWords);
 
     if (typeof alphabetizedWords === 'undefined') {
       alphabetizedWords = [];
@@ -131,13 +135,11 @@ define(function() {
             'Congratulations! ',
             m('button', {
               'onclick': function(e) {
+                generating = true;
                 cb.try(function(state) {
-                  cb.try(function(state) {
-                    generateNewWords(state);
-                  }).then(function(state) {
-                    alphabetizedWords = undefined;
-                    correct = false;
-                  });
+                  state.global.deviceState[state.device('id')]('currentWords', undefined);
+               }).then(function() {
+                 generating = false;
                });
               }
             }, ['Try some more'])
@@ -150,7 +152,7 @@ define(function() {
   var inertia = false;
   require(['apps/alphabetize/interact.js'], function(interact) {
     interact('.word')
-      .draggable({'restrict': {'restriction': '#app'}})
+      .draggable({'restrict': {'restriction': '#app'}, 'inertia': true})
       .on('dragstart', function(e) {
         e.target.setAttribute('data-hold', 1);
       })
@@ -160,14 +162,14 @@ define(function() {
         e.target.setAttribute('data-x', x = parseFloat(e.target.getAttribute('data-x')) + e.dx);
         e.target.setAttribute('data-y', y = parseFloat(e.target.getAttribute('data-y')) + e.dy);
 
+        updateTransform(e.target, true, true, true, true);
+
         cb.try(function(state) {
           var words = state.global.deviceState[state.device('id')].currentWords;
           var cur = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
           cur('x', x);
           cur('y', y);
         }).done();
-
-        updateTransform(e.target, true, true, true, true);
       })
       .on('dragend', function(e) {
         e.target.setAttribute('data-hold', 0);

@@ -26,7 +26,7 @@ html, body {
   background-color: #555555;
   border: 5px #555555 solid;
   border-radius: 10pt;
-  width: 300pt;
+  width: 400pt;
   margin: 0 auto;
   margin-top: 10pt;
 }
@@ -35,7 +35,7 @@ html, body {
   z-index: 1;
   color: white;
   text-align: center;
-  width: 300pt;
+  width: 400pt;
   position: absolute;
 }
 
