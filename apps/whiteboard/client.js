@@ -26,8 +26,6 @@ define(function() {
     ctx.lineJoin = "round";
     ctx.lineWidth = 5;
 
-    if (debug)
-      console.log(paths);
     paths.forEach(function(path, index) {
       if (path === null || typeof path === 'undefined')
         return;
@@ -101,7 +99,6 @@ define(function() {
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
-      console.log(paths);
       var p = [];
       for (var i = 0; i < e.changedTouches.length; i++) {
         p[e.changedTouches[i].identifier + 1] = paint[e.changedTouches[i].identifier + 1];
@@ -129,14 +126,20 @@ define(function() {
     }).done();
 
     cb.on('change', update);
-    cb.on('attempt', function() {
+    cb.on('attempt', function(state) {
       if (state.global.deviceState[state.device('id')]('version') !== version) {
         version = state.global.deviceState[state.device('id')]('version');
+        paths = [];
         clearScreen();
       }
     });
 
     parentElement.appendChild(canvas);
+
+    var controls = document.createElement('div');
+    m.mount(controls, Controls);
+
+    parentElement.appendChild(controls);
   };
 
   function update(state) {
@@ -159,6 +162,24 @@ define(function() {
 
     lastDraw = [];
   }
+
+  var Controls = {
+    'view': function() {
+      return (
+        m('div#controls', [
+          m('button.btn.btn-default', {
+            'onclick': function() {
+              cb.try(function(state) {
+                var self = state.global.deviceState[state.device('id')];
+                self('version', self('version') + 1);
+                self('paths', []);
+              });
+            }
+          }, ['Clear'])
+        ])
+      );
+    }
+  };
 
   return exports;
 });
