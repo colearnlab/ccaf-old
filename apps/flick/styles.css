@@ -1,46 +1,28 @@
-html, body {
-  background-color: #222222;
-  overflow: hidden;
-  height: 100%;
-  padding: 0pt;
-}
 
 #app {
   min-height: 100%;
 }
 
-canvas {
+#main {
+  min-height: 100%;
+}
+
+.flickable {
+  position: relative;
+  border: 10px solid #fff;
+  border-bottom: 45px solid #fff;
+  -webkit-box-shadow: 3px 3px 3px #777;
+     -moz-box-shadow: 3px 3px 3px #777;
+          box-shadow: 3px 3px 3px #777;
+}
+
+.arrow {
   position: absolute;
-  width: 100%;
-  height: 100%;
-}
-
-#controls {
-  position: absolute;
-  min-height: 50px;
-  z-index: 1;
-}
-
-.brush {
-  height: 50px;
-  width: 50px;
-  display: inline-block;
-  padding: 0;
-  margin-left: 10px;
-  margin-right: 10px;
-}
-
-.brush img {
-  padding: 0;
-  margin: 0;
-}
-
-.spacer1 {
-  display: inline-block;
-  width: 25px;
-}
-
-.spacer2 {
-  display: inline-block;
-  width: 5px;
+  margin: 100px;
+  height: 300px;
+  width: 175px;
+  left: 50%;
+  top: 50%;
+  margin-top: -150px;
+  margin-left: -138px;
 }

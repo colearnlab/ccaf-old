@@ -2,228 +2,222 @@ define(function() {
   var exports = {};
   var cb, parentElement;
 
+  var items, thisDevice, otherDevices;
+
   var loaded;
-
-  var canvas, ctx, paint, paths, lastDraw, version, pen;
-
-  function addToPath(path, x, y) {
-    if (isNaN(x) || x === null || isNaN(y) || y === null)
-      return;
-
-    if (typeof paths[path] === 'undefined' || paths[path] === null) {
-      paths[path] = {'X': [], 'Y': [], 'pen': pen};
-      lastDraw[path] = 0;
-    }
-    paths[path].X.push(x);
-    paths[path].Y.push(y);
-
-    redraw(paths);
-  }
-
-  function redraw(paths, debug) {
-    paths.forEach(function(path, index) {
-      if (path === null || typeof path === 'undefined')
-        return;
-
-      ctx.strokeStyle = path.pen.strokeStyle;
-      ctx.lineJoin = "round";
-      ctx.lineWidth = path.pen.lineWidth;
-      for (var i = (lastDraw[index] || 0); i < path.X.length; i++) {
-        ctx.beginPath();
-
-        ctx.moveTo(path.X[i-1] || path.X[i]-1, path.Y[i-1] || path.Y[i]);
-
-        //ctx.quadraticCurveTo(path.X[i], path.Y[i], ((path.X[i - 1] || path.X[i]) + path.X[i]) / 2, ((path.Y[i - 1] || path.Y[i]) + path.Y[i]) / 2);
-        ctx.lineTo(path.X[i], path.Y[i]);
-        ctx.closePath();
-        ctx.stroke();
-      }
-      lastDraw[index] = path.X.length;
-    });
-  }
-
 
   exports.startApp = function(_cb, _parentElement) {
     cb = _cb;
     parentElement = _parentElement;
 
-    css('/apps/whiteboard/styles.css');
-
-    canvas = document.createElement('canvas');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    ctx = canvas.getContext('2d');
-
-    paths = [];
-    paint = [];
-    lastDraw = [];
-
-    pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
-
-    canvas.onmousedown = function(e) {
-      paint[0] = paths.length;
-      addToPath(paint[0], e.pageX - this.offsetLeft, e.pageY - this.offsetTop);
-    };
-
-    canvas.onmousemove = function(e) {
-      if (paint[0] || paint[0] === 0)
-        addToPath(paint[0], e.pageX - this.offsetLeft, e.pageY - this.offsetTop, true);
-    };
-
-    canvas.onmouseleave = canvas.onmouseup = function(e) {
-      var p = paint[0];
-      if (paint[0] || paint[0] === 0)
-        cb.try(function(state) {
-          state.global.deviceState[state.device('id')].paths(p, paths[p]);
-        });
-
-      paint[0] = false;
-    };
-
-    canvas.ontouchstart = function(e) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        paint[e.changedTouches[i].identifier + 1] = paths.length + i;
-        addToPath(paint[e.changedTouches[i].identifier + 1], e.changedTouches[i].pageX - this.offsetLeft, e.changedTouches[i].pageY - this.offsetTop);
-      }
-    };
-
-    canvas.ontouchmove = function(e) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        if (paint[e.changedTouches[i].identifier + 1] || paint[e.changedTouches[i].identifier + 1] === 0)
-          addToPath(paint[e.changedTouches[i].identifier + 1], e.changedTouches[i].pageX - this.offsetLeft, e.changedTouches[i].pageY - this.offsetTop, true);
-      }
-    };
-
-    canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
-      var p = [];
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        p[e.changedTouches[i].identifier + 1] = paint[e.changedTouches[i].identifier + 1];
-        paint[e.changedTouches[i].identifier + 1] = false;
-      }
-
-      cb.try(function(state) {
-        for (var i = 0; i < e.changedTouches.length; i++)
-          state.global.deviceState[state.device('id')].paths(p[e.changedTouches[i].identifier + 1], paths[p[e.changedTouches[i].identifier + 1]]);
-      });
-    };
+    css('/apps/flick/styles.css');
 
     cb.try(function(state) {
       if (typeof state.global('deviceState') === 'undefined')
         state.global('deviceState', {});
       if (typeof state.global.deviceState(state.device('id')) === 'undefined')
         state.global.deviceState(state.device('id'), {});
-      if (typeof state.global.deviceState[state.device('id')]('paths') === 'undefined')
-        state.global.deviceState[state.device('id')]('paths', []);
-      if (typeof state.global.deviceState[state.device('id')]('version') === 'undefined')
-        state.global.deviceState[state.device('id')]('version', 0);
+      if (typeof state.global.deviceState[state.device('id')]('items') === 'undefined')
+        state.global.deviceState[state.device('id')]('items', [{'src': '/apps/flick/kittens/1.jpg'}]);
+      if (typeof state.global.deviceState[state.device('id')]('lastZ') === 'undefined')
+        state.global.deviceState[state.device('id')]('lastZ', 1);
+
+      state.global.deviceState[state.device('id')]('location', state.device('location'));
+      state.global.deviceState[state.device('id')]('screen', state.device('screen'));
+      state.global.deviceState[state.device('id')]('color', state.device('color'));
+      state.global.deviceState[state.device('id')]('name', state.device('name'));
+      state.global.deviceState[state.device('id')]('id', state.device('id'));
     }).then(function(state) {
       loaded = true;
       update(state);
     }).done();
 
     cb.on('change', update);
-    cb.on('attempt', function(state) {
-      if (state.global.deviceState[state.device('id')]('version') !== version) {
-        version = state.global.deviceState[state.device('id')]('version');
-        paths = [];
-        clearScreen();
-      }
-    });
-
-    parentElement.appendChild(canvas);
-
-    var controls = document.createElement('div');
-    m.mount(controls, Controls);
-
-    parentElement.appendChild(controls);
   };
 
   function update(state) {
     if (!loaded)
       return;
 
-    paths = state.global.deviceState[state.device('id')]('paths');
+    items = state.global.deviceState[state.device('id')]('items');
+    lastZ = state.global.deviceState[state.device('id')]('lastZ');
 
-    if (state.global.deviceState[state.device('id')]('version') !== version) {
-      version = state.global.deviceState[state.device('id')]('version');
-      clearScreen();
-    }
+    var devices = state.global('deviceState');
+    otherDevices = Object.keys(devices)
+      .filter(function(key) {
+        return key != state.device('id');
+      })
+      .map(function(key) {
+        return devices[key];
+    });
 
-    redraw(paths);
+    thisDevice = state('device');
+
+    m.render(parentElement, Root);
   }
 
-  function clearScreen() {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-    lastDraw = [];
-  }
-
-  var Controls = {
-    'controller': function() {
-      return {
-        'colors': ['red', 'green', 'blue', 'white', 'black']
-      };
-    },
-    'view': function(ctrl) {
+  var Root = {
+    'view': function(ctrl, args) {
       return (
-        m('div#controls.form-inline', [
-          m('button.btn.btn-default.btn-lg', {
-            'onclick': function() {
-              cb.try(function(state) {
-                var self = state.global.deviceState[state.device('id')];
-                self('version', self('version') + 1);
-                self('paths', []);
-              });
-            }
-          }, ['Clear']),
-          m('span.spacer1', [m.trust('&nbsp;')]),
-          m('span.input-group', [
-            m('input[type=range].form-control.input-lg', {
-              'value': pen.lineWidth,
-              'min': 5,
-              'max': 20,
-              'step': 1,
-              'oninput': function(e) {
-                pen.lineWidth = e.target.value;
-              }
-            }),
-            m('span.input-group-addon', [
-              m('span', {
-                'style': 'background-color:' + pen.strokeStyle + '; ' +
-                         'padding: 0; ' +
-                         'margin-left: ' + (25 - pen.lineWidth)/2 + 'px; ' +
-                         'margin-right: ' + (25 - pen.lineWidth)/2 + 'px; ' +
-                         'line-height: ' + pen.lineWidth + 'px; ' +
-                         'display: inline-block; ' +
-                         'width: ' + pen.lineWidth + 'px; ' +
-                         'height: ' + pen.lineWidth + 'px; ' +
-                         'border-radius: 50%'
-              }, [m.trust('&nbsp;')])
-            ])
-          ]),
-          m('span.spacer1', [m.trust('&nbsp;')]),
-          m('span.brush-holder',
-            ctrl.colors.map(function(color) {
-              return (
-                m('span.brush', {
-                  'style': 'background-color: ' + color + '; ',
-                  'onclick': function(e) {
-                    pen.strokeStyle = color;
-                  }
-                }, [
-                  m('img[src=/apps/whiteboard/splatter.gif]', {
-                    'height': '50px',
-                    'width': '50px'
-                  })
-                ])
-              );
+        m('div', [
+          items
+            .filter(function(item) {
+              return item !== null && 'src' in item;
             })
-          )
+            .map(function(item, index) {
+            item.index = index;
+            return m.component(Item, item);
+          }),
+          m.component(Compass)
         ])
       );
     }
   };
+
+  var Compass = {
+    'view': function(ctrl, args) {
+      return (
+        m('div', [
+          otherDevices.map(function(device) {
+            var angleRad = Math.atan2(device.location.y - thisDevice.location.y, device.location.x - thisDevice.location.x) - Math.PI / 2;
+            var angle =  angleRad * 180 / Math.PI;
+            var top = (Math.cos(angleRad)) * 50 + 50;
+            top = (top < 15 ? top + 15 : top > 85 ? top - 15 : top);
+            var left = (-Math.sin(angleRad)) * 50 + 50;
+            left = (left < 10 ? left + 10 : left > 90 ? left - 10 : left);
+
+            return m('div.arrow', {
+              'style': 'background-color: ' + device.color + '; -webkit-transform: rotate(' + angle + 'deg); transform: rotate(' + angle + 'deg);' +
+                       'top: ' +  top + '%;' +
+                       'left: ' + left + '%;',
+              'data-target': device.id
+            }, [
+              m('img', {
+              'height': '300px',
+              'src': '/apps/flick/arrow.gif'
+              })
+            ]);
+          })
+        ])
+      );
+    }
+  };
+
+  var Item = {
+    'view': function(ctrl, item) {
+      return m('img.flickable', {
+        'data-x': item.x || 0,
+        'data-y': item.y || 0,
+        'data-z': item.z || 0,
+        'data-angle': item.angle || 0,
+        'data-index': item.index,
+        'data-hold': item.hold,
+        'config': updateTransform,
+        'src': item.src,
+        'width': '600px'
+      });
+    }
+  };
+
+  function updateTransform(target) {
+    var x = target.getAttribute('data-x');
+    var y = target.getAttribute('data-y');
+    var z = target.getAttribute('data-z');
+    var angle = target.getAttribute('data-angle');
+
+    target.style['z-index'] = z;
+
+    target.style.webkitTransform =
+    target.style.transform =
+      'translate(' + x + 'px, ' + y + 'px) rotate(' + angle + 'deg)';
+  }
+
+  function onstart(e) {
+    var target = e.target;
+    var z = target.style['z-index'] = lastZ++;
+    cb.try(function(state) {
+      try {
+      var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
+      if (self('hold') === false || typeof self('hold') === 'undefined') {
+        self('z', z);
+        self('hold', cb.uuid());
+      }
+    } catch(e) {
+      debugger;
+    }
+    });
+  }
+
+  function onmove(e) {
+    var target = e.target, x, y, angle;
+    target.setAttribute('data-x', x = parseFloat(target.getAttribute('data-x')) + e.dx);
+    target.setAttribute('data-y', y = parseFloat(target.getAttribute('data-y')) + e.dy);
+    target.setAttribute('data-angle', angle = parseFloat(target.getAttribute('data-angle')) + (1 * (e.da || 0)));
+    updateTransform(e.target);
+
+    cb.try(function(state) {
+      var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
+      if (self('hold') === cb.uuid()) {
+        self('x', x);
+        self('y', y);
+        self('angle', angle);
+      }
+    });
+  }
+
+  function onend(e) {
+    var target = e.target;
+    cb.try(function(state) {
+      var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
+      if (typeof self !== 'undefined' && self('hold') === cb.uuid()) {
+        self('hold', false);
+      }
+    });
+  }
+
+  require(['/apps/flick/interact.js'], function(interact) {
+    interact('.flickable')
+      .draggable({
+        'inertia': true,
+        'restrict': {'restriction': '#app'},
+        'onstart': onstart,
+        'onmove': onmove,
+        'onend': onend
+      })
+      .gesturable({
+        'onstart': onstart,
+        'onmove': onmove,
+        'onend': onend
+      });
+
+      interact('.arrow')
+        .dropzone({
+          'accept': '.flickable',
+          'pointer': false,
+          'center': false,
+          'overlap': 0.1,
+          'ondrop': function(e) {
+            e.draggable.options.drag.restrict.enabled = false;
+            console.log('sending...');
+            cb.try(function(state) {
+              var index = parseInt(e.relatedTarget.getAttribute('data-index'));
+              var items = state.global.deviceState[state.device('id')].items;
+              items[index]('hold', false);
+
+              var item = items(index);
+
+              items(index, {});
+
+              var target = state.global.deviceState[parseInt(e.target.getAttribute('data-target'))];
+              target.items(target('items').length, item);
+            }).then(function(state) {
+              items = state.global.deviceState[state.device('id')]('items');
+              update(state);
+            }).done();
+          }
+        });
+
+  });
 
   return exports;
 });
