@@ -28,12 +28,12 @@ define(function() {
       ctx.strokeStyle = path.pen.strokeStyle;
       ctx.lineJoin = "round";
       ctx.lineWidth = path.pen.lineWidth;
-
       for (var i = (lastDraw[index] || 0); i < path.X.length; i++) {
         ctx.beginPath();
 
         ctx.moveTo(path.X[i-1] || path.X[i]-1, path.Y[i-1] || path.Y[i]);
 
+        //ctx.quadraticCurveTo(path.X[i], path.Y[i], ((path.X[i - 1] || path.X[i]) + path.X[i]) / 2, ((path.Y[i - 1] || path.Y[i]) + path.Y[i]) / 2);
         ctx.lineTo(path.X[i], path.Y[i]);
         ctx.closePath();
         ctx.stroke();
@@ -162,7 +162,7 @@ define(function() {
   var Controls = {
     'controller': function() {
       return {
-        'colors': ['red', 'green', 'blue']
+        'colors': ['red', 'green', 'blue', 'white', 'black']
       };
     },
     'view': function(ctrl) {
@@ -207,11 +207,14 @@ define(function() {
             ctrl.colors.map(function(color) {
               return (
                 m('span.brush', {
-                  'style': 'background-color: ' + color + '; '
+                  'style': 'background-color: ' + color + '; ',
+                  'onclick': function(e) {
+                    pen.strokeStyle = color;
+                  }
                 }, [
                   m('img[src=/apps/whiteboard/splatter.gif]', {
-                    'height': '25px',
-                    'width': '25px'
+                    'height': '50px',
+                    'width': '50px'
                   })
                 ])
               );
