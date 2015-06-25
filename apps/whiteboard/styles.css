@@ -17,5 +17,29 @@ canvas {
 
 #controls {
   position: absolute;
+  min-height: 50px;
   z-index: 1;
+}
+
+.brush {
+  height: 25px;
+  width: 25px;
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.brush img {
+  padding: 0;
+  margin: 0;
+}
+
+.spacer1 {
+  display: inline-block;
+  width: 25px;
+}
+
+.spacer2 {
+  display: inline-block;
+  width: 5px;
 }

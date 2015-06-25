@@ -68,12 +68,17 @@
         var pageDirectionX;
 
         document.addEventListener('touchstart', function(e){
+            if (e.target.tagName === 'INPUT')
+              return;
             pageDirectionX = e.changedTouches[0].pageX;
         });
 
         document.addEventListener('touchmove', function(e){
-            if (pageDirectionX !== e.changedTouches[0].pageX)
-                e.preventDefault();
+          if (e.target.tagName === 'INPUT')
+            return;
+
+          if (pageDirectionX !== e.changedTouches[0].pageX)
+              e.preventDefault();
         });
       }());
 

@@ -4,41 +4,35 @@ define(function() {
 
   var loaded;
 
-  var canvas, ctx, paint, paths, lastDraw, version;
+  var canvas, ctx, paint, paths, lastDraw, version, pen;
 
-  function addToPath(path, x, y, drag) {
+  function addToPath(path, x, y) {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
       return;
 
     if (typeof paths[path] === 'undefined' || paths[path] === null) {
-      paths[path] = {'X': [], 'Y': [], 'drag': []};
+      paths[path] = {'X': [], 'Y': [], 'pen': pen};
       lastDraw[path] = 0;
     }
     paths[path].X.push(x);
     paths[path].Y.push(y);
-    paths[path].drag.push(drag || false);
 
     redraw(paths);
   }
 
   function redraw(paths, debug) {
-    ctx.strokeStyle = "#df4b26";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 5;
-
     paths.forEach(function(path, index) {
       if (path === null || typeof path === 'undefined')
         return;
 
+      ctx.strokeStyle = path.pen.strokeStyle;
+      ctx.lineJoin = "round";
+      ctx.lineWidth = path.pen.lineWidth;
+
       for (var i = (lastDraw[index] || 0); i < path.X.length; i++) {
         ctx.beginPath();
 
-        if (path.drag[i] && i) {
-          ctx.moveTo(path.X[i-1], path.Y[i-1]);
-        }
-        else {
-         ctx.moveTo(path.X[i]-1, path.Y[i]);
-        }
+        ctx.moveTo(path.X[i-1] || path.X[i]-1, path.Y[i-1] || path.Y[i]);
 
         ctx.lineTo(path.X[i], path.Y[i]);
         ctx.closePath();
@@ -63,6 +57,8 @@ define(function() {
     paths = [];
     paint = [];
     lastDraw = [];
+
+    pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
 
     canvas.onmousedown = function(e) {
       paint[0] = paths.length;
@@ -164,10 +160,15 @@ define(function() {
   }
 
   var Controls = {
-    'view': function() {
+    'controller': function() {
+      return {
+        'colors': ['red', 'green', 'blue']
+      };
+    },
+    'view': function(ctrl) {
       return (
-        m('div#controls', [
-          m('button.btn.btn-default', {
+        m('div#controls.form-inline', [
+          m('button.btn.btn-default.btn-lg', {
             'onclick': function() {
               cb.try(function(state) {
                 var self = state.global.deviceState[state.device('id')];
@@ -175,7 +176,47 @@ define(function() {
                 self('paths', []);
               });
             }
-          }, ['Clear'])
+          }, ['Clear']),
+          m('span.spacer1', [m.trust('&nbsp;')]),
+          m('span.input-group', [
+            m('input[type=range].form-control.input-lg', {
+              'value': pen.lineWidth,
+              'min': 5,
+              'max': 20,
+              'step': 1,
+              'oninput': function(e) {
+                pen.lineWidth = e.target.value;
+              }
+            }),
+            m('span.input-group-addon', [
+              m('span', {
+                'style': 'background-color:' + pen.strokeStyle + '; ' +
+                         'padding: 0; ' +
+                         'margin-left: ' + (25 - pen.lineWidth)/2 + 'px; ' +
+                         'margin-right: ' + (25 - pen.lineWidth)/2 + 'px; ' +
+                         'line-height: ' + pen.lineWidth + 'px; ' +
+                         'display: inline-block; ' +
+                         'width: ' + pen.lineWidth + 'px; ' +
+                         'height: ' + pen.lineWidth + 'px; ' +
+                         'border-radius: 50%'
+              }, [m.trust('&nbsp;')])
+            ])
+          ]),
+          m('span.spacer1', [m.trust('&nbsp;')]),
+          m('span.brush-holder',
+            ctrl.colors.map(function(color) {
+              return (
+                m('span.brush', {
+                  'style': 'background-color: ' + color + '; '
+                }, [
+                  m('img[src=/apps/whiteboard/splatter.gif]', {
+                    'height': '25px',
+                    'width': '25px'
+                  })
+                ])
+              );
+            })
+          )
         ])
       );
     }
