@@ -190,8 +190,8 @@ define(function() {
   require(['/apps/flick/interact.js'], function(interact) {
     interact('.flickable')
       .draggable({
-        'inertia': true,
-        'restrict': {'restriction': '#app'},
+        'inertia': {'resistance': 5, 'endSpeed': 200},
+        'restrict': {'restriction': '#app', 'endOnly': true},
         'onstart': onstart,
         'onmove': onmove,
         'onend': onend

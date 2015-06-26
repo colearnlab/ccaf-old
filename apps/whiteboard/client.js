@@ -28,12 +28,16 @@ define(function() {
       ctx.strokeStyle = path.pen.strokeStyle;
       ctx.lineJoin = "round";
       ctx.lineWidth = path.pen.lineWidth;
+
+      var startX, startY;
       for (var i = (lastDraw[index] || 0); i < path.X.length; i++) {
+        startX = path.X[i-1] || path.X[i]-1;
+        startY = path.Y[i-1] || path.Y[i];
         ctx.beginPath();
 
-        ctx.moveTo(path.X[i-1] || path.X[i]-1, path.Y[i-1] || path.Y[i]);
+        ctx.moveTo(startX, startY);
 
-        //ctx.quadraticCurveTo(path.X[i], path.Y[i], ((path.X[i - 1] || path.X[i]) + path.X[i]) / 2, ((path.Y[i - 1] || path.Y[i]) + path.Y[i]) / 2);
+        //ctx.quadraticCurveTo(path.X[i], path.Y[i], ((path.X[i-1] || path.X[i]-1) + path.X[i]) / 2, ((path.Y[i-1] || path.Y[i]) + path.Y[i]) / 2);
         ctx.lineTo(path.X[i], path.Y[i]);
         ctx.closePath();
         ctx.stroke();
