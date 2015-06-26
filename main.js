@@ -143,7 +143,7 @@ checkerboard.on('close', function(conn) {
 
   if (lastDevice)
     device('connected', false);
-    
+
     Object.keys(assoc).forEach(function(key) {
       if (assoc[key].classroom === savedAssoc.classroom)
         assoc[key].conn.refresh();
@@ -153,6 +153,8 @@ checkerboard.on('close', function(conn) {
 
 function exit() {
   clearInterval(dbInterval);
+
+  db = checkerboard.state().merge();
 
   db.classrooms.forEach(function(classroom) {
     classroom.appRoot = {};

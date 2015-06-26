@@ -19,6 +19,8 @@ canvas {
   position: absolute;
   min-height: 50px;
   z-index: 1;
+  left: 25px;
+  top: 25px;
 }
 
 .brush {

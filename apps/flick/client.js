@@ -2,7 +2,7 @@ define(function() {
   var exports = {};
   var cb, parentElement;
 
-  var items, thisDevice, otherDevices;
+  var items, thisDevice, otherDevices, lastZ, lastLength;
 
   var loaded;
 
@@ -29,6 +29,7 @@ define(function() {
       state.global.deviceState[state.device('id')]('id', state.device('id'));
     }).then(function(state) {
       loaded = true;
+      lastLength = state.global.deviceState[state.device('id')]('items').length;
       update(state);
     }).done();
 
@@ -61,12 +62,24 @@ define(function() {
       return (
         m('div', [
           items
-            .filter(function(item) {
-              return item !== null && 'src' in item;
+            .filter(function(item, index) {
+              if (item !== null && typeof item !== 'undefined') {
+                item.index = index;
+                return true;
+              }
             })
-            .map(function(item, index) {
-            item.index = index;
-            return m.component(Item, item);
+            .map(function(item) {
+              if ('sender' in item) {
+                var arrows = document.getElementsByClassName('arrow');
+                for (var i = 0; i < arrows.length; i++) {
+                  if (arrows[i].getAttribute('data-target') == item.sender) {
+                    item.x = parseInt(arrows[i].style.left.replace('%', '')) / 100 * window.innerWidth;
+                    item.y = parseInt(arrows[i].style.top.replace('%', '')) / 100 * window.innerHeight;
+                    console.log(item);
+                  }
+                }
+              }
+              return m.component(Item, item);
           }),
           m.component(Compass)
         ])
@@ -135,16 +148,15 @@ define(function() {
   function onstart(e) {
     var target = e.target;
     var z = target.style['z-index'] = lastZ++;
+    target.setAttribute('data-z', z);
     cb.try(function(state) {
-      try {
       var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
       if (self('hold') === false || typeof self('hold') === 'undefined') {
         self('z', z);
+        self('sender', undefined);
+        state.global.deviceState[state.device('id')]('lastZ', z);
         self('hold', cb.uuid());
       }
-    } catch(e) {
-      debugger;
-    }
     });
   }
 
@@ -197,16 +209,17 @@ define(function() {
           'center': false,
           'overlap': 0.1,
           'ondrop': function(e) {
-            e.draggable.options.drag.restrict.enabled = false;
             console.log('sending...');
             cb.try(function(state) {
               var index = parseInt(e.relatedTarget.getAttribute('data-index'));
-              var items = state.global.deviceState[state.device('id')].items;
-              items[index]('hold', false);
+              var items = state.global.deviceState[state.device('id')]('items');
 
-              var item = items(index);
+              var item = items.splice(index, 1)[0];
 
-              items(index, {});
+              item.sender = state.device('id');
+              item.hold = false;
+
+              state.global.deviceState[state.device('id')]('items', items);
 
               var target = state.global.deviceState[parseInt(e.target.getAttribute('data-target'))];
               target.items(target('items').length, item);
@@ -216,7 +229,6 @@ define(function() {
             }).done();
           }
         });
-
   });
 
   return exports;
