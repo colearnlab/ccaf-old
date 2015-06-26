@@ -70,12 +70,20 @@ define(function() {
             })
             .map(function(item) {
               if ('sender' in item) {
+                if (item.z > lastZ)
+                  lastZ = item.z;
                 var arrows = document.getElementsByClassName('arrow');
                 for (var i = 0; i < arrows.length; i++) {
                   if (arrows[i].getAttribute('data-target') == item.sender) {
                     item.x = parseInt(arrows[i].style.left.replace('%', '')) / 100 * window.innerWidth;
                     item.y = parseInt(arrows[i].style.top.replace('%', '')) / 100 * window.innerHeight;
-                    console.log(item);
+                    item.sender = undefined;
+                    cb.try(function(state) {
+                      var self = state.global.deviceState[state.device('id')].items[item.index];
+                      self('x', item.x);
+                      self('y', item.y);
+                      self('sender', undefined);
+                    });
                   }
                 }
               }
@@ -121,7 +129,7 @@ define(function() {
       return m('img.flickable', {
         'data-x': item.x || 0,
         'data-y': item.y || 0,
-        'data-z': item.z || 0,
+        'data-z': item.z || 1,
         'data-angle': item.angle || 0,
         'data-index': item.index,
         'data-hold': item.hold,
@@ -151,9 +159,10 @@ define(function() {
     target.setAttribute('data-z', z);
     cb.try(function(state) {
       var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
+      if (typeof self === 'undefined')
+        return;
       if (self('hold') === false || typeof self('hold') === 'undefined') {
         self('z', z);
-        self('sender', undefined);
         state.global.deviceState[state.device('id')]('lastZ', z);
         self('hold', cb.uuid());
       }
@@ -169,6 +178,8 @@ define(function() {
 
     cb.try(function(state) {
       var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
+      if (typeof self === 'undefined')
+        return;
       if (self('hold') === cb.uuid()) {
         self('x', x);
         self('y', y);
@@ -181,6 +192,8 @@ define(function() {
     var target = e.target;
     cb.try(function(state) {
       var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
+      if (typeof self === 'undefined')
+        return;
       if (typeof self !== 'undefined' && self('hold') === cb.uuid()) {
         self('hold', false);
       }
@@ -190,7 +203,7 @@ define(function() {
   require(['/apps/flick/interact.js'], function(interact) {
     interact('.flickable')
       .draggable({
-        'inertia': {'resistance': 5, 'endSpeed': 200},
+        'inertia': {'resistance': 10},
         'restrict': {'restriction': '#app', 'endOnly': true},
         'onstart': onstart,
         'onmove': onmove,
@@ -207,9 +220,8 @@ define(function() {
           'accept': '.flickable',
           'pointer': false,
           'center': false,
-          'overlap': 0.1,
+          'overlap': 0.01,
           'ondrop': function(e) {
-            console.log('sending...');
             cb.try(function(state) {
               var index = parseInt(e.relatedTarget.getAttribute('data-index'));
               var items = state.global.deviceState[state.device('id')]('items');
@@ -224,8 +236,9 @@ define(function() {
               var target = state.global.deviceState[parseInt(e.target.getAttribute('data-target'))];
               target.items(target('items').length, item);
             }).then(function(state) {
-              items = state.global.deviceState[state.device('id')]('items');
-              update(state);
+              var maybeRemove = state.global.deviceState[state.device('id')]('items')[e.relatedTarget.getAttribute('data-index')];
+              if (typeof maybeRemove === 'undefined' || maybeRemove.z === e.relatedTarget.getAttribute('data-z'));
+                e.relatedTarget.parentNode.removeChild(e.relatedTarget);
             }).done();
           }
         });

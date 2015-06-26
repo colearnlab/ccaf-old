@@ -51,7 +51,7 @@ define(function() {
       newWords.push(cur);
     }
 
-    newWords = newWords.map(function(word, index) { return {'text': word, 'index': index}; });
+    newWords = newWords.map(function(word, index) { return {'text': word, 'index': index, 'holderActive': false, 'holderDropped': false}; });
     currentWordlist = state.global.deviceState[state.device('id')]('wordlist');
 
     self('currentWords', newWords);
@@ -72,7 +72,6 @@ define(function() {
 
     currentWords = state.global.deviceState[state.device('id')]('currentWords');
     correct = state.global.deviceState[state.device('id')]('correct');
-    console.log(currentWords);
 
     if (typeof alphabetizedWords === 'undefined') {
       alphabetizedWords = [];
@@ -138,8 +137,6 @@ define(function() {
                 generating = true;
                 cb.try(function(state) {
                   state.global.deviceState[state.device('id')]('currentWords', undefined);
-               }).then(function() {
-                 generating = false;
                });
               }
             }, ['Try some more'])
@@ -196,7 +193,7 @@ define(function() {
             var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
             holder('holderActive', false);
             e.target.classList.remove('holderActive');
-            if (holder('holderDropped') === parseInt(e.relatedTarget.getAttribute('data-index'))) {
+            if (holder('holderDropped') == parseInt(e.relatedTarget.getAttribute('data-index'))) {
               e.target.classList.remove('holderDropped');
               holder('holderDropped', false);
             }
@@ -206,10 +203,9 @@ define(function() {
           cb.try(function(state) {
             var words = state.global.deviceState[state.device('id')].currentWords;
             var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
-            if (typeof holder('holderDropped') === 'undefined' || holder('holderDropped') === false) {
+            if (holder('holderDropped') === false || holder('holderDropped') === parseInt(e.relatedTarget.getAttribute('data-index'))) {
               holder('holderActive', false);
               holder('holderDropped', parseInt(e.relatedTarget.getAttribute('data-index')));
-
               state.global.deviceState[state.device('id')]('correct', true);
               state.global.deviceState[state.device('id')]('currentWords').forEach(function(w, index) {
                 if (typeof w.holderDropped === 'undefined' || w.holderDropped === false || w.holderDropped !== alphabetizedWords[index].index)
