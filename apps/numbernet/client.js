@@ -1,10 +1,11 @@
 define(function() {
   var exports = {};
-  var cb;
+  var cb, parentElement;
 
-  var calculators;
-  exports.startApp = function(_cb, parentElement) {
+  var loaded, calculators, target;
+  exports.startApp = function(_cb, _parentElement) {
     cb = _cb;
+    parentElement = _parentElement;
     css('/apps/numbernet/styles.css');
     cb.try(function(state) {
       if (typeof state.global('deviceState') === 'undefined')
@@ -16,27 +17,30 @@ define(function() {
         self('results', []);
       if (typeof self('calculators') === 'undefined')
         self('calculators', []);
-      if (typeof self('calculators') !== 'undefined' && self('calculators').length === 0)
-        self.calculators(0, {});
     }).then(function(state) {
-      var self = state.global.deviceState[state.device('id')];
-      calculators = self('calculators');
-      m.mount(parentElement, m.component(Main));
+      loaded = true;
+      update(state);
     }).done();
 
     cb.on('change', update);
   };
 
   function update(state) {
+    if (!loaded)
+      return;
     var self = state.global.deviceState[state.device('id')];
     calculators = self('calculators');
-    m.redraw(true);
+    target = self('target');
+    m.render(parentElement, m.component(Main));
   }
 
   var Main = {
     'view': function(ctrl, args) {
       return (
         m('div', [
+          m('div#target', [
+            target
+          ]),
           calculators.map(function(calculator, index) {
             calculator.index = index;
             return m.component(CalculatorView, calculator);
@@ -139,7 +143,7 @@ define(function() {
               }, key);
             })
           ),
-          m('div.name', ['Greg'])
+          m('div.name', [args.name])
         ])
       );
     }

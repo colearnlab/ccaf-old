@@ -145,3 +145,29 @@ html, body {
   font-size: 24pt;
   text-align: center;
 }
+
+#target {
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 250;
+  width: 250pt;
+  margin-top: -125pt;
+  margin-left: -125pt;
+  color: black;
+  text-align: center;
+  line-height: 250pt;
+  font-size: 120pt;
+  -webkit-animation: spin 20s infinite linear;
+  text-decoration: underline;
+  font-family: 'Lucida Console', 'Lucida Sans Typewriter', monaco, 'Bitstream Vera Sans Mono', monospace;
+  font-weight: bold;
+  -webkit-font-smoothing: antialiased;
+}
+
+@-webkit-keyframes spin {
+    0%   {-webkit-transform: rotate(0deg)}
+    100% {-webkit-transform: rotate(360deg)}
+}
