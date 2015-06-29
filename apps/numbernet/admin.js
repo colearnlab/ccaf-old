@@ -76,36 +76,11 @@ define(function() {
               })
             ])
           ]),
-          m('div.col-md-3', [
+          m('div.col-md-6', [
             m('ul.list-group', [
               args.calculators.map(function(calculator, index) {
-                console.log(calculator);
-                return m('li.list-group-item', [
-                  m('div.input-group', [
-                    m('input.form-control', {
-                      'value': calculator.name || '',
-                      'oninput': function(e) {
-                        cb.try(function(state) {
-                          state.appRoot[m.route.param('subpage')].deviceState[args.index].calculators[index]('name', e.target.value);
-                        });
-                      }
-                    }),
-                    m('span.input-group-addon', {
-                      'onclick': function(e) {
-                        cb.try(function(state) {
-                          var calcs = state.appRoot[m.route.param('subpage')].deviceState[args.index]('calculators');
-                          calcs.splice(index, 1);
-                          state.appRoot[m.route.param('subpage')].deviceState[args.index]('calculators', calcs);
-                        }).then(update).done();
-                      }
-                    }, [
-                      m('span.glyphicon.glyphicon-remove')
-                    ])
-                  ]),
-                  (calculator.expressions || []).map(function(expression) {
-                    return [m('h4', {'style': 'display: inline-block'}, m('div.label' + (!expression.correct ? '.label-danger' : expression.unique ? '.label-success' : '.label-warning'), [expression.text])), ' '];
-                  })
-                ]);
+                calculator.index = index;
+                return m.component(Calculator, {'index': args.index, 'calculator': calculator});
               })
             ]),
             m('button.btn.btn-success', {
@@ -123,6 +98,82 @@ define(function() {
       ]);
     }
   };
+
+  var Calculator = {
+    'controller': function() {
+      return {
+        'toggle': false
+      }
+    },
+    'view': function(ctrl, args) {
+      return m('li.list-group-item.row', [
+        m('div.col-md-6', [
+          m('div.input-group', [
+            m('input.form-control', {
+              'value': args.calculator.name || '',
+              'oninput': function(e) {
+                cb.try(function(state) {
+                  state.appRoot[m.route.param('subpage')].deviceState[args.index].calculators[args.calculator.index]('name', e.target.value);
+                });
+              }
+            }),
+            m('span.input-group-addon', {
+              'onclick': function(e) {
+                cb.try(function(state) {
+                  var calcs = state.appRoot[m.route.param('subpage')].deviceState[args.index]('calculators');
+                  calcs.splice(args.calculator.index, 1);
+                  state.appRoot[m.route.param('subpage')].deviceState[args.index]('calculators', calcs);
+                }).then(update).done();
+              }
+            }, [
+              m('span.glyphicon.glyphicon-remove')
+            ])
+          ]),
+          (args.calculator.expressions || []).map(function(expression) {
+            return [m('h4', {'style': 'display: inline-block'}, m('div.label' + (!expression.correct ? '.label-danger' : expression.unique ? '.label-success' : '.label-warning'), [expression.text])), ' '];
+          })
+        ]),
+        m('div.col-md-6', [
+            (!ctrl.toggle ? m('button.btn.btn-default.col-md-6.col-md-offset-3', {
+              'onclick': function() {
+                ctrl.toggle = true;
+                update(cb.state());
+              }
+            }, ['Edit individiual keys']) :
+              m('div', {
+                'style': 'width: 300px; margin-left: auto; margin-right: auto'
+              }, [
+                [7, 8, 9, '+', 4, 5, 6, '-', 1, 2, 3, '÷', 0, '.', m.trust('&nbsp'), '×'].map(function(key) {
+                  return m('button.btn' + ((args.calculator.disabled || []).indexOf(key) === -1 ? '.btn-primary' : ''), {
+                    'style': 'width: 50px; margin: 12.5px; font-weight: bold',
+                    'onclick': function(e) {
+                      cb.try(function(state) {
+                        var self = state.appRoot[m.route.param('subpage')].deviceState[args.index].calculators[args.calculator.index];
+                        if (typeof self('disabled') === 'undefined')
+                          self('disabled', []);
+
+                        var index = self('disabled').indexOf(key);
+                        var potIndex = self('disabled').indexOf('');
+                        if (index === -1)
+                          self.disabled(potIndex !== -1 ? potIndex : self('disabled').length, key);
+                        else
+                          self.disabled(index, '');
+                      }).then(update).done();
+                    }
+                  }, key)
+                }),
+                m('button.btn.btn-default.col-md-6.col-md-offset-3', {
+                 'onclick': function() {
+                   ctrl.toggle = false;
+                   update(cb.state());
+                 }
+               }, ['Done'])
+              ])
+            )
+        ])
+      ]);
+    }
+  }
 
   return exports;
 });

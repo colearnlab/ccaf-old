@@ -13,8 +13,6 @@ define(function() {
       if (typeof state.global.deviceState(state.device('id')) === 'undefined')
         state.global.deviceState(state.device('id'), {});
       var self = state.global.deviceState[state.device('id')];
-      if (typeof self('results') === 'undefined')
-        self('results', []);
       if (typeof self('calculators') === 'undefined')
         self('calculators', []);
     }).then(function(state) {
@@ -45,8 +43,27 @@ define(function() {
           calculators.map(function(calculator, index) {
             calculator.index = index;
             return m.component(CalculatorView, calculator);
+          }),
+          calculators.reduce(function(acc, c) { return acc.concat(c.expressions) }, []).map(function(e) {
+            //return m.component(Expression, e);
           })
         ])
+      );
+    }
+  };
+
+  var Expression = {
+    'view': function(ctrl, args) {
+      return (
+        m('span.expression', {
+          'data-orbit': args.orbit || 0,
+          'config': function(el) {
+            setTimeout(function() {
+
+            }, 100);
+          }
+        },
+        [args.text])
       );
     }
   };

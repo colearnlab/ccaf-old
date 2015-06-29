@@ -176,3 +176,11 @@ html, body {
   pointer-events: none;
   opacity: 0.5;
 }
+
+.expression {
+  background-color: gray;
+  font-size: 72pt;
+  color: white;
+  border-radius: 75%;
+  padding: 10pt;
+}
