@@ -132,7 +132,6 @@ define(function() {
         'data-z': item.z || 1,
         'data-angle': item.angle || 0,
         'data-index': item.index,
-        'data-hold': item.hold,
         'config': updateTransform,
         'src': item.src,
         'width': '600px'
@@ -140,7 +139,10 @@ define(function() {
     }
   };
 
-  function updateTransform(target) {
+  function updateTransform(target, _, _, _, force) {
+    if (typeof force === 'undefined' && parseInt(target.getAttribute('data-hold')) === 1)
+      return;
+
     var x = target.getAttribute('data-x');
     var y = target.getAttribute('data-y');
     var z = target.getAttribute('data-z');
@@ -157,6 +159,7 @@ define(function() {
     var target = e.target;
     var z = target.style['z-index'] = lastZ++;
     target.setAttribute('data-z', z);
+
     cb.try(function(state) {
       var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
       if (typeof self === 'undefined')
@@ -165,6 +168,7 @@ define(function() {
         self('z', z);
         state.global.deviceState[state.device('id')]('lastZ', z);
         self('hold', cb.uuid());
+        target.setAttribute('data-hold', 1);
       }
     });
   }
@@ -174,7 +178,7 @@ define(function() {
     target.setAttribute('data-x', x = parseFloat(target.getAttribute('data-x')) + e.dx);
     target.setAttribute('data-y', y = parseFloat(target.getAttribute('data-y')) + e.dy);
     target.setAttribute('data-angle', angle = parseFloat(target.getAttribute('data-angle')) + (1 * (e.da || 0)));
-    updateTransform(e.target);
+    updateTransform(e.target, undefined, undefined, undefined, true);
 
     cb.try(function(state) {
       var self = state.global.deviceState[state.device('id')].items[parseInt(target.getAttribute('data-index'))];
@@ -196,6 +200,7 @@ define(function() {
         return;
       if (typeof self !== 'undefined' && self('hold') === cb.uuid()) {
         self('hold', false);
+        target.setAttribute('data-hold', 0);
       }
     });
   }
@@ -222,9 +227,13 @@ define(function() {
           'center': false,
           'overlap': 0.01,
           'ondrop': function(e) {
+            e.relatedTarget.setAttribute('data-hold', 0);
+
             cb.try(function(state) {
               var index = parseInt(e.relatedTarget.getAttribute('data-index'));
               var items = state.global.deviceState[state.device('id')]('items');
+              console.log(index);
+              console.log(JSON.stringify(items));
 
               var item = items.splice(index, 1)[0];
 
@@ -232,14 +241,11 @@ define(function() {
               item.hold = false;
 
               state.global.deviceState[state.device('id')]('items', items);
+              console.log(state.global.deviceState[state.device('id')]('items'));
 
               var target = state.global.deviceState[parseInt(e.target.getAttribute('data-target'))];
               target.items(target('items').length, item);
-            }).then(function(state) {
-              var maybeRemove = state.global.deviceState[state.device('id')]('items')[e.relatedTarget.getAttribute('data-index')];
-              if (typeof maybeRemove === 'undefined' || maybeRemove.z === e.relatedTarget.getAttribute('data-z'));
-                e.relatedTarget.parentNode.removeChild(e.relatedTarget);
-            }).done();
+            });
           }
         });
   });
