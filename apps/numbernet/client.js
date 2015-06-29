@@ -134,7 +134,13 @@ define(function() {
                       if (!isNaN(answer)) {
                         if (typeof calc('expressions') === 'undefined')
                           calc('expressions', []);
-                        calc.expressions(calc('expressions').length, {'text': args.screen, 'correct': answer == target});
+
+                        var unique = true;
+                        calculators.forEach(function(calculator) {
+                          if ((calculator.expressions || []).map(function(c) { return c.text; }).indexOf(args.screen) !== -1)
+                            unique = false;
+                        });
+                        calc.expressions(calc('expressions').length, {'text': args.screen, 'correct': answer == target, 'unique': unique});
                       }
                       calc('screen', undefined);
                     }).then(update).done();

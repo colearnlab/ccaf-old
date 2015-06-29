@@ -103,7 +103,7 @@ define(function() {
                     ])
                   ]),
                   (calculator.expressions || []).map(function(expression) {
-                    return [m('h4', {'style': 'display: inline-block'}, m('div.label' + (expression.correct ? '.label-success' : '.label-danger'), [expression.text])), ' '];
+                    return [m('h4', {'style': 'display: inline-block'}, m('div.label' + (!expression.correct ? '.label-danger' : expression.unique ? '.label-success' : '.label-warning'), [expression.text])), ' '];
                   })
                 ]);
               })
