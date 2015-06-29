@@ -57,12 +57,15 @@ define(function() {
       var operators = ['+', '-', '÷', '×'];
       var transform = 'translate(' + (args.x || 0) + 'px, ' + (args.y || 0) + 'px) rotate(' + (args.angle || 0) + 'deg);';
       if (typeof args.screen === 'undefined')
+      {
         stm.try(function(state) {
           var calc = state.global.deviceState[state.device('id')].calculators[args.index];
           calc('screen', '');
           calc('decimalClicked', false);
           calc('operatorClicked', false);
-        });
+        }).then(update).done();
+        args.screen = '';
+      }
       return (
         m('div.calculator', {
           'style': 'position: absolute; webkit-transform: ' + transform + 'transform: ' + transform,
@@ -120,7 +123,21 @@ define(function() {
                     }).then(update).done();
                   }
                   else if (key === '='){
-
+                    stm.try(function(state) {
+                      var calc = state.global.deviceState[state.device('id')].calculators[args.index];
+                      var answer;
+                      try {
+                        answer = eval(args.screen.replace('÷', '/').replace('×', '*'));
+                      } catch (e) {
+                        return;
+                      }
+                      if (!isNaN(answer)) {
+                        if (typeof calc('expressions') === 'undefined')
+                          calc('expressions', []);
+                        calc.expressions(calc('expressions').length, {'text': args.screen, 'correct': answer == target});
+                      }
+                      calc('screen', undefined);
+                    }).then(update).done();
                   }
                 }
               }, key);

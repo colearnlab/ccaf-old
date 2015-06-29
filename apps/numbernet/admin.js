@@ -79,6 +79,7 @@ define(function() {
           m('div.col-md-3', [
             m('ul.list-group', [
               args.calculators.map(function(calculator, index) {
+                console.log(calculator);
                 return m('li.list-group-item', [
                   m('div.input-group', [
                     m('input.form-control', {
@@ -100,7 +101,10 @@ define(function() {
                     }, [
                       m('span.glyphicon.glyphicon-remove')
                     ])
-                  ])
+                  ]),
+                  (calculator.expressions || []).map(function(expression) {
+                    return [m('h4', {'style': 'display: inline-block'}, m('div.label' + (expression.correct ? '.label-success' : '.label-danger'), [expression.text])), ' '];
+                  })
                 ]);
               })
             ]),
