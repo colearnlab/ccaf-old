@@ -51,6 +51,29 @@ define(function() {
                   });
                 }
               })
+            ]),
+            m('div', {
+              'style': 'width: 300px; margin-left: auto; margin-right: auto'
+            }, [
+              [7, 8, 9, '+', 4, 5, 6, '-', 1, 2, 3, '÷', 0, '.', m.trust('&nbsp'), '×'].map(function(key) {
+                return m('button.btn' + ((args.disabled || []).indexOf(key) === -1 ? '.btn-primary' : ''), {
+                  'style': 'width: 50px; margin: 12.5px; font-weight: bold',
+                  'onclick': function(e) {
+                    cb.try(function(state) {
+                      var self = state.appRoot[m.route.param('subpage')].deviceState[args.index];
+                      if (typeof self('disabled') === 'undefined')
+                        self('disabled', []);
+
+                      var index = self('disabled').indexOf(key);
+                      var potIndex = self('disabled').indexOf('');
+                      if (index === -1)
+                        self.disabled(potIndex !== -1 ? potIndex : self('disabled').length, key);
+                      else
+                        self.disabled(index, '');
+                    }).then(update).done();
+                  }
+                }, key)
+              })
             ])
           ]),
           m('div.col-md-3', [

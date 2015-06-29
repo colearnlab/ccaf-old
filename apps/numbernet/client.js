@@ -2,7 +2,7 @@ define(function() {
   var exports = {};
   var cb, parentElement;
 
-  var loaded, calculators, target;
+  var loaded, calculators, target, disabled;
   exports.startApp = function(_cb, _parentElement) {
     cb = _cb;
     parentElement = _parentElement;
@@ -31,6 +31,7 @@ define(function() {
     var self = state.global.deviceState[state.device('id')];
     calculators = self('calculators');
     target = self('target');
+    disabled = self('disabled');
     m.render(parentElement, m.component(Main));
   }
 
@@ -51,12 +52,6 @@ define(function() {
   };
 
   var CalculatorView = {
-    'controller': function(args) {
-      return {
-        'screen': args.screen || '',
-        'decimalClicked': args.decimalClicked
-      };
-    },
     'view': function(ctrl, args) {
       var keyOrder = [7, 8, 9, '+', 4, 5, 6, '-', 1, 2, 3, '÷', 0, '.', '=', '×'];
       var operators = ['+', '-', '÷', '×'];
@@ -66,6 +61,7 @@ define(function() {
           var calc = state.global.deviceState[state.device('id')].calculators[args.index];
           calc('screen', '');
           calc('decimalClicked', false);
+          calc('operatorClicked', false);
         });
       return (
         m('div.calculator', {
@@ -83,6 +79,7 @@ define(function() {
                   var calc = state.global.deviceState[state.device('id')].calculators[args.index];
                   calc('screen', '');
                   calc('decimalClicked', false);
+                  calc('operatorClicked', false);
                 }).then(update).done();
               }
             }, ['C']),
@@ -90,7 +87,7 @@ define(function() {
           ]),
           m('div.keys',
             keyOrder.map(function(key) {
-              var c;
+              var c, d;
               if (operators.indexOf(key) !== -1)
                 c = '.operator';
               else if (key === '=')
@@ -98,7 +95,8 @@ define(function() {
               else
                 c = '';
 
-              return m('span' + c, {
+              d = (disabled || []).indexOf(key) != -1 ? '.disabledKey' : '';
+              return m('span' + c + d, {
                 'onclick': function(e) {
                   var last = args.screen[args.screen.length - 1];
                   if (!isNaN(key))
@@ -106,38 +104,23 @@ define(function() {
                       var calc = state.global.deviceState[state.device('id')].calculators[args.index];
                       calc('screen', calc('screen') + key);
                     }).then(update).done();
-                  else if (key === '.' && !isNaN(last) && !ctrl.decimalClicked) {
+                  else if (key === '.' && !isNaN(last) && !args.decimalClicked) {
                     stm.try(function(state) {
                       var calc = state.global.deviceState[state.device('id')].calculators[args.index];
                       calc('screen', calc('screen') + key);
                       calc('decimalClicked', true);
                     }).then(update).done();
                   }
-                  else if (operators.indexOf(key) !== -1 && operators.indexOf(last) === -1) {
+                  else if (operators.indexOf(key) !== -1 && operators.indexOf(last) === -1 && !args.operatorClicked) {
                     stm.try(function(state) {
                       var calc = state.global.deviceState[state.device('id')].calculators[args.index];
                       calc('screen', calc('screen') + key);
                       calc('decimalClicked', false);
+                      calc('operatorClicked', true);
                     }).then(update).done();
                   }
                   else if (key === '='){
-                    return;
-                    var result;
-                    try {
-                      result = eval(ctrl.screen); // replace div, multiply
-                    } catch(e) {
-                      result = false;
-                    } finally {
-                      if (result !== false) {
-                        cb.try(function(state) {
-                          var results = state.self.results();
-                          results.push({'id': state.self.results().length, 'equation': ctrl.screen, 'result': result});
-                          state.self.results(results);
-                        });
-                      }
-                      else
-                        ctrl.screen = '';
-                    }
+
                   }
                 }
               }, key);
