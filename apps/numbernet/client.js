@@ -79,7 +79,6 @@ define(function() {
           var calc = state.global.deviceState[state.device('id')].calculators[args.index];
           calc('screen', '');
           calc('decimalClicked', false);
-          calc('operatorClicked', false);
         }).then(update).done();
         args.screen = '';
       }
@@ -99,7 +98,6 @@ define(function() {
                   var calc = state.global.deviceState[state.device('id')].calculators[args.index];
                   calc('screen', '');
                   calc('decimalClicked', false);
-                  calc('operatorClicked', false);
                 }).then(update).done();
               }
             }, ['C']),
@@ -115,7 +113,7 @@ define(function() {
               else
                 c = '';
 
-              d = (disabled || []).indexOf(key) != -1 ? '.disabledKey' : '';
+              d = ((disabled || []).indexOf(key) !== -1 || (args.disabled || []).indexOf(key) !== -1) && (args.enabled || []).indexOf(key) === -1 ? '.disabledKey' : '';
               return m('span' + c + d, {
                 'onclick': function(e) {
                   var last = args.screen[args.screen.length - 1];
@@ -131,12 +129,11 @@ define(function() {
                       calc('decimalClicked', true);
                     }).then(update).done();
                   }
-                  else if (operators.indexOf(key) !== -1 && operators.indexOf(last) === -1 && !args.operatorClicked) {
+                  else if (operators.indexOf(key) !== -1 && operators.indexOf(last) === -1) {
                     stm.try(function(state) {
                       var calc = state.global.deviceState[state.device('id')].calculators[args.index];
                       calc('screen', calc('screen') + key);
                       calc('decimalClicked', false);
-                      calc('operatorClicked', true);
                     }).then(update).done();
                   }
                   else if (key === '='){

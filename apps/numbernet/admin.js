@@ -143,22 +143,32 @@ define(function() {
               m('div', {
                 'style': 'width: 300px; margin-left: auto; margin-right: auto'
               }, [
+                m.trust('White &#8594; default; gray/blue &#8594; disabled/enabled'),
                 [7, 8, 9, '+', 4, 5, 6, '-', 1, 2, 3, '÷', 0, '.', m.trust('&nbsp'), '×'].map(function(key) {
-                  return m('button.btn' + ((args.calculator.disabled || []).indexOf(key) === -1 ? '.btn-primary' : ''), {
-                    'style': 'width: 50px; margin: 12.5px; font-weight: bold',
+                  return m('button.btn.noHover' + ((args.calculator.disabled || []).indexOf(key) !== -1 ? '.disabledKey' : (args.calculator.enabled || []).indexOf(key) !== -1 ? '.btn-primary' : '.btn-default'), {
+                    'style': 'width: 50px; margin: 12.5px; font-weight: bold; -webkit-touch-callout: none;',
                     'onclick': function(e) {
+                      if (typeof key === 'object')
+                        return;
                       cb.try(function(state) {
                         var self = state.appRoot[m.route.param('subpage')].deviceState[args.index].calculators[args.calculator.index];
                         if (typeof self('disabled') === 'undefined')
                           self('disabled', []);
+                        if (typeof self('enabled') === 'undefined')
+                          self('enabled', []);
 
-                        var index = self('disabled').indexOf(key);
-                        var potIndex = self('disabled').indexOf('');
-                        if (index === -1)
-                          self.disabled(potIndex !== -1 ? potIndex : self('disabled').length, key);
-                        else
-                          self.disabled(index, '');
+                        var individuallyDisabled = self('disabled').indexOf(key);
+                        var individuallyEnabled = self('enabled').indexOf(key);
+                        if (individuallyEnabled === -1 && individuallyDisabled === -1)
+                          self.disabled(self('disabled').length, key);
+                        else if (individuallyDisabled > -1) {
+                          self.disabled(individuallyDisabled, '');
+                          self.enabled(self('enabled').length, key);
+                        } else {
+                          self.enabled(individuallyEnabled, '');
+                        }
                       }).then(update).done();
+                      document.activeElement.blur();
                     }
                   }, key)
                 }),
