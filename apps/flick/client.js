@@ -63,7 +63,7 @@ define(function() {
         m('div', [
           items
             .filter(function(item, index) {
-              if (item !== null && typeof item !== 'undefined') {
+              if (item !== null && typeof item !== 'undefined' && 'src' in item) {
                 item.index = index;
                 return true;
               }
@@ -231,21 +231,20 @@ define(function() {
 
             cb.try(function(state) {
               var index = parseInt(e.relatedTarget.getAttribute('data-index'));
-              var items = state.global.deviceState[state.device('id')]('items');
-              console.log(index);
-              console.log(JSON.stringify(items));
+              var items = state.global.deviceState[state.device('id')].items;
 
-              var item = items.splice(index, 1)[0];
+              var item = items(index);
+              if (typeof item === 'undefined')
+                return;
+                
+              items(index, undefined);
 
               item.sender = state.device('id');
               item.hold = false;
 
-              state.global.deviceState[state.device('id')]('items', items);
-              console.log(state.global.deviceState[state.device('id')]('items'));
-
               var target = state.global.deviceState[parseInt(e.target.getAttribute('data-target'))];
               target.items(target('items').length, item);
-            });
+            }).then(update).done();
           }
         });
   });

@@ -35,8 +35,8 @@ html, body {
   z-index: 1;
   color: white;
   text-align: center;
-  margin-left: 50pt;
-  width: 300pt;
+  margin-left: 0pt;
+  width: 400pt;
   position: absolute;
 }
 

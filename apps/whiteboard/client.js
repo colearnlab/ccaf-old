@@ -186,7 +186,7 @@ define(function() {
             m('input[type=range].form-control.input-lg', {
               'value': pen.lineWidth,
               'min': 5,
-              'max': 20,
+              'max': 32,
               'step': 1,
               'oninput': function(e) {
                 pen.lineWidth = e.target.value;
