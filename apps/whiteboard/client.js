@@ -4,7 +4,7 @@ define(function() {
 
   var loaded;
 
-  var canvas, ctx, paint, paths, lastDraw, version, pen;
+  var canvas, ctx, paint, paths, lastDraw, version, pen, lastPath = [];
 
   function addToPath(path, x, y) {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
@@ -76,6 +76,7 @@ define(function() {
 
     canvas.onmouseleave = canvas.onmouseup = function(e) {
       var p = paint[0];
+      lastPath.push(p);
       if (paint[0] || paint[0] === 0)
         cb.try(function(state) {
           state.global.deviceState[state.device('id')].paths(p, paths[p]);
@@ -106,8 +107,10 @@ define(function() {
       }
 
       cb.try(function(state) {
-        for (var i = 0; i < e.changedTouches.length; i++)
+        for (var i = 0; i < e.changedTouches.length; i++) {
           state.global.deviceState[state.device('id')].paths(p[e.changedTouches[i].identifier + 1], paths[p[e.changedTouches[i].identifier + 1]]);
+          lastPath.push(p[e.changedTouches[i].identifier + 1]);
+        }
       });
     };
 
@@ -166,7 +169,7 @@ define(function() {
   var Controls = {
     'controller': function() {
       return {
-        'colors': ['red', 'green', 'blue', 'white', 'black']
+        'colors': ['red', 'green', 'blue', 'black']
       };
     },
     'view': function(ctrl) {
@@ -181,6 +184,22 @@ define(function() {
               });
             }
           }, ['Clear']),
+          m('span.spacer1', [m.trust('&nbsp;')]),
+          m('button.btn.btn-default.btn-lg', {
+            'onclick': function() {
+              var myPath = lastPath.pop();
+              if (typeof myPath === 'undefined')
+                return;
+              cb.try(function(state) {
+                var self = state.global.deviceState[state.device('id')];
+                self.paths(myPath, undefined);
+              }).then(function(state) {
+                paths = state.global.deviceState[state.device('id')]('paths');
+                clearScreen();
+                redraw(paths);
+              });
+            }
+          }, ['Undo']),
           m('span.spacer1', [m.trust('&nbsp;')]),
           m('span.input-group', [
             m('input[type=range].form-control.input-lg', {
@@ -222,7 +241,17 @@ define(function() {
                   })
                 ])
               );
-            })
+            }),
+            m('span.brush', {
+              'onclick': function(e) {
+                pen.strokeStyle = 'white';
+              }
+            }, [
+              m('img[src=/apps/whiteboard/eraser.png]', {
+                'height': '50px',
+                'width': '50px'
+              })
+            ])
           )
         ])
       );

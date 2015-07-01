@@ -57,6 +57,7 @@ define(function() {
       var transform = 'translate(' + (args.x || 0) + 'px, ' + (args.y || 0) + 'px) rotate(' + (args.angle || 0) + 'deg);';
       if (!args.unique)
         return m('div');
+
       return (
         m('div.expression', {
           'data-x': args.x || 0,
