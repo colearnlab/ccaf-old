@@ -1,3 +1,9 @@
+node_modules
+tmp
+out
+server
+client.exe
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db

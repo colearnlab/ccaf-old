@@ -28,6 +28,36 @@
   iframe {
     border: none; height: 100%; width: 100%; min-height: 100%;
   }
+  #menu {
+    position: absolute;
+    z-index: 1000;
+    display: inline-block;
+    height: 50px;
+    right: 25px;
+    top: 25px;
+    border-radius: 5px;
+    background-color: gray;
+    padding-left: 5px;
+  }
+
+  #menu .icon {
+    display: inline-block;
+    background-color: lightgray;
+    height: 40px;
+    width: 40px;
+    margin: 5px 5px 5px 0;
+    border-radius: 5px;
+    padding: 0;
+  }
+
+  .icon .glyphicon {
+      line-height: 38px;
+      font-size: 32px;
+  }
+
+  #close {
+    background-color: red !important;
+  }
   </style>
 
   <link rel="stylesheet" href="/lib/css/bootstrap.min.css" />
@@ -51,6 +81,13 @@
       document.getElementsByTagName("head")[0].appendChild(link);
     }
 
+    function parameter(name) {
+      name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+      var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+          results = regex.exec(location.search);
+      return results === null ? null : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+
     function reset() {
       [].slice.call(document.getElementsByClassName('app-css')).forEach(function(link) {
         link.parentNode.removeChild(link);
@@ -64,6 +101,13 @@
     }
 
     window.onload = function() {
+      var closeIcon = document.getElementById('close');
+      console.log(closeIcon);
+      closeIcon.style.display = parameter('electron') ? 'inline-block' : 'none';
+      closeIcon.onclick = function(e) {
+        document.title = 0;
+      };
+
       (function() {
         var pageDirectionX;
 
@@ -72,8 +116,11 @@
         });
 
         document.addEventListener('touchmove', function(e){
-            if (pageDirectionX !== e.changedTouches[0].pageX)
-                e.preventDefault();
+          if (e.target.tagName === 'INPUT')
+            return;
+
+          if (pageDirectionX !== e.changedTouches[0].pageX)
+              e.preventDefault();
         });
       }());
 
@@ -82,7 +129,7 @@
            return false;
       }
 
-      conn = new WebSocket('ws://' + ('location' in window ? window.location.hostname : 'localhost') + ':1808/');
+      conn = new WebSocket('ws://' + window.location.hostname + ':' + (parameter('port') || '1808'));
 
       conn.onopen = function() {
         stm = new Checkerboard(conn);
@@ -128,14 +175,11 @@
             document.body.appendChild(el);
           }
           else if (device('app') !== savedApp) {
-            if (typeof savedApp !== 'undefined')
-              location.reload();
-
             savedApp = device('app');
             var el = reset();
 
             if (typeof device('app') !== 'undefined') {
-              require(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
+              requirejs(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
                 document.body.appendChild(el);
                 document.body.style.backgroundColor = '';
                 app.startApp(stm, el);
@@ -203,6 +247,10 @@
   </script>
 </head>
 <body oncontextmenu="return false">
+<div id="menu">
+  <div class="icon" id="return">&nbsp;<span class="glyphicon glyphicon-eject"></span></div>
+  <div class="icon" id="close">&nbsp;<span class="glyphicon glyphicon-remove"></span></div>
+</div>
 <div id="app"></div>
 </body>
 </html>

@@ -1,13 +1,19 @@
 {
   "name": "reflectproject",
-  "version": "0.1.5",
-  "main": "main.js",
+  "version": "0.2.0",
+  "main": "client.js",
   "dependencies": {
-    "checkerboard": "^0.1.0",
-    "body-parser": "^1.12.4",
+    "checkerboard": "^0.2.0",
     "express": "^4.12.4",
-    "jsonschema": "^1.0.1",
-    "nedb": "^1.1.2",
-    "ws": "^0.7.2"
+    "ip": "^0.3.3"
+  },
+  "devDependencies": {
+    "electron-packager": "^4.2.0",
+    "nexe": "^0.4.0"
+  },
+  "scripts": {
+    "package-server": "node_modules/.bin/nexe -i ././server.js -o server.exe -r latest -F nodejs",
+    "package-client": "node_modules/.bin/electron-packager ././ client --out=out --ignore=\"(apps|console|client\\index\\.html|lib|node_modules\\checkerboard|node_modules\\express|node_modules\\nexe|tmp|embedded\\.db|server\\.js|server\\.json)\" --version=0.28.3 --platform=win32 --arch=x64",
+    "package-all": "npm run package-server & npm run package-client"
   }
 }

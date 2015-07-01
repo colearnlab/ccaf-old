@@ -32,7 +32,7 @@ var App = (function(){
       var loadedApps = [];
       stm.on('change', function(state) {
         state('devices').map(function(d) { return d.app; }).forEach(function(app) {
-          if (loadedApps.indexOf(app) === -1 && typeof state.apps(app) !== 'undefined') {
+          if (loadedApps.indexOf(app) === -1 && typeof state.apps(app) !== 'undefined' && 'admin' in state.apps(app)) {
             addPage({'title': state.apps(app).title, 'href': app, 'config': m.route, 'controller': AppTab});
             loadedApps.push(app);
           }

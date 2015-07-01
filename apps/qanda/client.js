@@ -16,6 +16,24 @@ define(function() {
       propegateChanges(state);
     });
 
+    cb.on('attempt', function(state) {
+      var currentPuzzleData = state.global.deviceState[state.device('id')]('currentPuzzleData');
+      if (typeof currentPuzzleData === 'undefined')
+        return;
+
+      numCorrect = 0;
+      placed = 0;
+      currentPuzzleData.forEach(function(puzzleDatum, index) {
+        if ('holderDrop' in puzzleDatum && puzzleDatum.holderDrop !== false) {
+          placed++;
+          if (puzzleDatum.holderDrop == index)
+            numCorrect++;
+        }
+      });
+
+      m.render(parentElement, Root);
+    });
+
     require(['/apps/qanda/puzzles.js'], function(_puzzles) {
       puzzles = _puzzles;
       cb.try(function(state) {
