@@ -16,7 +16,7 @@ var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(
   "ports": {
     "http": 1867,
     "ws": 1808,
-    "udp": 4000
+    "udp": 8088
   },
   "server": "localhost"
 }
@@ -47,13 +47,17 @@ app.on('ready', function() {
       loaded = true;
     }
   });
+  
   socket.bind(config.ports.udp);
+  socket.on('listening', function() {
+    socket.setBroadcast(true);
+  });
 
   setTimeout(function() {
     if (!loaded) {
       mainWindow.loadUrl('http://' + config.server + ':' + config.ports.http + '/?port=' + config.ports.ws + '&electron=1');
     }
-  }, 15000);
+  }, 10000);
 
   mainWindow.on('closed', function() {
     mainWindow = null;

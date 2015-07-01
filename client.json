@@ -2,7 +2,7 @@
   "ports": {
     "http": 1867,
     "ws": 1808,
-    "udp": 4000
+    "udp": 8088
   },
   "server": "localhost"
 }
