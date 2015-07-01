@@ -4,16 +4,14 @@
   "main": "main.js",
   "dependencies": {
     "checkerboard": "^0.2.0",
-    "express": "^4.12.4"
+    "express": "^4.12.4",
+    "ip": "^0.3.3"
   },
   "devDependencies": {
+    "electron-packager": "^4.2.0",
     "nexe": "^0.4.0"
   },
-  "nexe": {
-    "input": "././main.js",
-    "output": "rpserver^$",
-    "runtime": {
-      "framework": "nodejs"
-    }
+  "scripts": {
+    "package-server": "node_modules/.bin/nexe -i ././main.js -o server\\^$ -r latest -F nodejs"
   }
 }

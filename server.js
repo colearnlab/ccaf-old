@@ -1,9 +1,18 @@
 var fs = require('fs');
 var path = require('path');
 
-var db;
+var db, config;
 
 db = fs.existsSync(path.resolve(__dirname, 'embedded.db')) ? JSON.parse(fs.readFileSync(path.resolve(__dirname, 'embedded.db'))) : {};
+config = fs.existsSync(path.resolve(__dirname, 'server.json')) ? JSON.parse(fs.readFileSync(path.resolve(__dirname, 'server.json'))) : {
+  "ports": {
+    "http": 1867,
+    "ws": 1808,
+    "udp": 4000
+  },
+  "broadcast": "localhost",
+  "subnet": "255.255.255.0"
+};
 
 function saveDB() {
   fs.writeFileSync(path.resolve(__dirname, 'embedded.db'), JSON.stringify(db));
@@ -11,19 +20,44 @@ function saveDB() {
 
 var dbInterval = setInterval(saveDB, 60 * 1000);
 
-// some defaults
-if (typeof db.config !== 'object' || db.config === null)
-  db.config = {};
-
-if (typeof db.config.ports !== 'object' || db.config.ports === null)
-  db.config.ports = {'http': 1867, 'ws': 1808};
-
 if (typeof db.classrooms !== 'object' || db.classrooms === null)
     db.classrooms = [];
+    
+var os = require('os');
+var ifaces = os.networkInterfaces();
+var addresses = [];
+
+Object.keys(ifaces).forEach(function (ifname) {
+  ifaces[ifname].forEach(function (iface, index) {
+    if ('IPv4' === iface.family && iface.internal === false)
+      addresses.push(iface.address);
+  });
+});
+
+console.log('This server\'s address(es): ' + addresses + ', with a default address of: ' + config.broadcast);
+if (typeof config.broadcast !== 'undefined')
+  addresses.push(config.broadcast);
+
+var dgram = require('dgram');
+var ip = require('ip');
+var dgramClient = dgram.createSocket('udp4');
+dgramClient.bind(config.ports.udp);
+
+console.log('UDP port: ' + config.ports.udp);
+
+addresses.forEach(function(address) {
+  var broadcast = address !== 'localhost' ? ip.subnet(address, config.subnet).broadcastAddress : address;
+  setInterval(function() {
+    var message = new Buffer(JSON.stringify({'ports': config.ports}));
+    dgramClient.send(message, 0, message.length, config.ports.udp, broadcast);
+  }, 5000);
+});
 
 var assoc = {};
-var checkerboard = new (require('checkerboard')).Server(db.config.ports.ws, db);
+var checkerboard = new (require('checkerboard')).Server(config.ports.ws, db);
 var State = checkerboard.state;
+
+console.log('Websocket port: ' + config.ports.ws);
 
 var express = require('express'),
     http = express();
@@ -37,7 +71,9 @@ http.get('/*', function(req, res, next) {
 http.get('/', express.static(path.resolve(__dirname, 'client')));
 http.use('/', express.static(path.resolve(__dirname)));
 
-http.listen(db.config.ports.http);
+http.listen(config.ports.http);
+
+console.log('HTTP port: ' + config.ports.http);
 
 function getApps() {
   var toReturn = {};
