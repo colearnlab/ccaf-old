@@ -10,6 +10,8 @@ app.on('window-all-closed', function() {
     app.quit();
 });
 
+var fs = require('fs');
+var path = require('path');
 var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(fs.readFileSync(path.resolve(__dirname, 'server.json'))) : {
   "ports": {
     "http": 1867,
@@ -30,13 +32,19 @@ app.on('ready', function() {
   var loaded = false;
   
   socket.on('message', function(buf, info) {
-    var message = buf.toJSON();
+    var message = JSON.parse(buf.toString());
     if (!loaded && 'ports' in message) {
       mainWindow.loadUrl('http://' + info.address + ':' + message.ports.http + '/?' + message.ports.ws);
       loaded = true;
     }
   });
   socket.bind(config.ports.udp);
+
+  setTimeout(function() {
+    if (!loaded) {
+      mainWindow.loadUrl('http://' + config.server + ':' + config.ports.http + '/?' + config.ports.ws);
+    }
+  }, 15000);
 
   mainWindow.on('closed', function() {
     mainWindow = null;

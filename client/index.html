@@ -85,7 +85,7 @@
            return false;
       }
 
-      conn = new WebSocket('ws://' + ('location' in window ? window.location.hostname : 'localhost') + ':1808/');
+      conn = new WebSocket('ws://' + window.location.hostname + ':' + (location.search.length > 0 ? location.search.substring(1, location.search.length) : '1808/'));
 
       conn.onopen = function() {
         stm = new Checkerboard(conn);
@@ -138,7 +138,7 @@
             var el = reset();
 
             if (typeof device('app') !== 'undefined') {
-              require(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
+              requirejs(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
                 document.body.appendChild(el);
                 document.body.style.backgroundColor = '';
                 app.startApp(stm, el);
