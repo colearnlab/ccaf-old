@@ -1,4 +1,5 @@
 node_modules
+tmp
 
 # Windows image file caches
 Thumbs.db

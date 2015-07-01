@@ -4,10 +4,16 @@
   "main": "main.js",
   "dependencies": {
     "checkerboard": "^0.2.0",
-    "body-parser": "^1.12.4",
-    "express": "^4.12.4",
-    "jsonschema": "^1.0.1",
-    "nedb": "^1.1.2",
-    "ws": "^0.7.2"
+    "express": "^4.12.4"
+  },
+  "devDependencies": {
+    "nexe": "^0.4.0"
+  },
+  "nexe": {
+    "input": "././main.js",
+    "output": "rpserver^$",
+    "runtime": {
+      "framework": "nodejs"
+    }
   }
 }
