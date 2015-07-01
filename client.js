@@ -12,7 +12,7 @@ app.on('window-all-closed', function() {
 
 var fs = require('fs');
 var path = require('path');
-var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(fs.readFileSync(path.resolve(__dirname, 'server.json'))) : {
+var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(fs.readFileSync(path.resolve(__dirname, 'client.json'))) : {
   "ports": {
     "http": 1867,
     "ws": 1808,
