@@ -2,8 +2,8 @@
   "ports": {
     "http": 1867,
     "ws": 1808,
-    "udp": 4000
+    "udp": 8088
   },
-  "broadcast": "localhost",
-  "subnet": "255.255.255.0"
+  "broadcast": "172.22.245.255",
+  "subnet": "255.255.255.128"
 }

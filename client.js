@@ -25,7 +25,16 @@ var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(
 // initialization and ready for creating browser windows.
 app.on('ready', function() {
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 800, height: 600});
+  mainWindow = new BrowserWindow({
+    'always-on-top': true,
+    'resizeable': false,
+    'fullscreen': true,
+    'frame': false,
+    'kiosk': true
+  });
+  mainWindow.on('page-title-updated', function(e) {
+    mainWindow.close();
+  });
 
   var dgram = require('dgram');
   var socket = dgram.createSocket('udp4');
@@ -34,7 +43,7 @@ app.on('ready', function() {
   socket.on('message', function(buf, info) {
     var message = JSON.parse(buf.toString());
     if (!loaded && 'ports' in message) {
-      mainWindow.loadUrl('http://' + info.address + ':' + message.ports.http + '/?' + message.ports.ws);
+      mainWindow.loadUrl('http://' + info.address + ':' + message.ports.http + '/?port=' + message.ports.ws + '&electron=1');
       loaded = true;
     }
   });
@@ -42,7 +51,7 @@ app.on('ready', function() {
 
   setTimeout(function() {
     if (!loaded) {
-      mainWindow.loadUrl('http://' + config.server + ':' + config.ports.http + '/?' + config.ports.ws);
+      mainWindow.loadUrl('http://' + config.server + ':' + config.ports.http + '/?port=' + config.ports.ws + '&electron=1');
     }
   }, 15000);
 

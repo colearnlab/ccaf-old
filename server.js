@@ -10,7 +10,6 @@ config = fs.existsSync(path.resolve(__dirname, 'server.json')) ? JSON.parse(fs.r
     "ws": 1808,
     "udp": 4000
   },
-  "broadcast": "localhost",
   "subnet": "255.255.255.0"
 };
 
@@ -22,7 +21,7 @@ var dbInterval = setInterval(saveDB, 60 * 1000);
 
 if (typeof db.classrooms !== 'object' || db.classrooms === null)
     db.classrooms = [];
-    
+
 var os = require('os');
 var ifaces = os.networkInterfaces();
 var addresses = [];
@@ -34,24 +33,25 @@ Object.keys(ifaces).forEach(function (ifname) {
   });
 });
 
-console.log('This server\'s address(es): ' + addresses + ', with a default address of: ' + config.broadcast);
-if (typeof config.broadcast !== 'undefined')
-  addresses.push(config.broadcast);
+console.log('This server\'s address(es): ' + addresses);
 
 var dgram = require('dgram');
 var ip = require('ip');
 var dgramClient = dgram.createSocket('udp4');
-dgramClient.bind(config.ports.udp);
-
-console.log('UDP port: ' + config.ports.udp);
+dgramClient.bind(config.ports.udp, function() {
+  dgramClient.setBroadcast(true);
+  dgramClient.setMulticastTTL(128);
+});
 
 addresses.forEach(function(address) {
-  var broadcast = address !== 'localhost' ? ip.subnet(address, config.subnet).broadcastAddress : address;
+  console.log('Broadcasting to ' + ip.subnet(address, config.subnet).broadcastAddress);
   setInterval(function() {
     var message = new Buffer(JSON.stringify({'ports': config.ports}));
-    dgramClient.send(message, 0, message.length, config.ports.udp, broadcast);
-  }, 5000);
+    dgramClient.send(message, 0, message.length, config.ports.udp, ip.subnet(address, config.subnet).broadcastAddress);
+  }, 1000);
 });
+
+console.log('UDP port: ' + config.ports.udp);
 
 var assoc = {};
 var checkerboard = new (require('checkerboard')).Server(config.ports.ws, db);
