@@ -70,11 +70,6 @@ app.on('ready', function() {
     mainWindow.close();
   });
 
-mainWindow.webContents.on('did-finish-load', function() {
-    mainWindow.webContents.send('tuio', 'hi');
-
-  });
-
   var dgram = require('dgram');
   var socket = dgram.createSocket('udp4');
 
