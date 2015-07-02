@@ -2,6 +2,7 @@
 <html>
 <head>
   <script src="/lib/mithril.js"></script>
+  <script src="/lib/tuio.js"></script>
   <script src="/lib/q.min.js"></script>
   <script src="/node_modules/checkerboard/lib/checkerboard.js"></script>
   <script src="/lib/require.js"></script>
@@ -107,6 +108,8 @@
       closeIcon.onclick = function(e) {
         document.title = 0;
       };
+
+      new TUIO.Client();
 
       (function() {
         var pageDirectionX;
