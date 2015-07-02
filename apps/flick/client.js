@@ -205,7 +205,7 @@ define(function() {
     });
   }
 
-  require(['/apps/flick/interact.js'], function(interact) {
+  requirejs(['/apps/flick/interact.js'], function(interact) {
     interact('.flickable')
       .draggable({
         'inertia': {'resistance': 10},

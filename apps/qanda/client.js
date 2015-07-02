@@ -34,7 +34,7 @@ define(function() {
       m.render(parentElement, Root);
     });
 
-    require(['/apps/qanda/puzzles.js'], function(_puzzles) {
+    requirejs(['/apps/qanda/puzzles.js'], function(_puzzles) {
       puzzles = _puzzles;
       cb.try(function(state) {
         if (typeof state.global('deviceState') === 'undefined')
@@ -121,7 +121,7 @@ define(function() {
     }
   };
 
-  require(['apps/qanda/interact.js'], function(interact) {
+  requirejs(['apps/qanda/interact.js'], function(interact) {
     interact('.answer')
       .draggable({'restrict': {'restriction': '#app'}})
       .on('dragstart', function(e) {

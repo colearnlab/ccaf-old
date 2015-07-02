@@ -10,7 +10,7 @@ define(function() {
     cb.on('attempt', propegateChanges);
     cb.on('change', propegateChanges);
 
-    require(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
+    requirejs(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
       cb.try(function(state) {
         if (typeof state.appRoot.alphabetize('deviceState') === 'undefined')

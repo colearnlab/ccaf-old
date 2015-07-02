@@ -222,7 +222,7 @@ define(function() {
       'translate(' + x + 'px, ' + y + 'px) rotate(' + angle + 'deg)';
   }
 
-  require(['apps/numbernet/interact.js'], function(interact) {
+  requirejs(['apps/numbernet/interact.js'], function(interact) {
     interact('.calculator')
       .draggable({'restrict': {'restriction': '#app'},'inertia': true})
       .on('dragmove', updateTransform)

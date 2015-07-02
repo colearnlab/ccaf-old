@@ -15,7 +15,7 @@ define(function() {
         propegateChanges(state);
     });
 
-    require(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
+    requirejs(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
       cb.try(function(state) {
         if (typeof state.global('deviceState') === 'undefined')
@@ -147,7 +147,7 @@ define(function() {
   };
 
   var inertia = false;
-  require(['apps/alphabetize/interact.js'], function(interact) {
+  requirejs(['apps/alphabetize/interact.js'], function(interact) {
     interact('.word')
       .draggable({'restrict': {'restriction': '#app'}, 'inertia': true})
       .on('dragstart', function(e) {
