@@ -157,7 +157,7 @@ var Home = (function() {
                       m('a', {
                         'onclick': function() {
                           stm.try(function(state) {
-                            rpapi.using(state)
+                            api(state)
                               .device(c.id)
                               .project(device.id);
                           });
@@ -170,7 +170,7 @@ var Home = (function() {
               m('button.btn.btn-default', {
                 'onclick': function() {
                   stm.try(function(state) {
-                    rpapi.using(state)
+                    api(state)
                       .device(device.id)
                       .toggleFreeze();
                   });
@@ -179,7 +179,7 @@ var Home = (function() {
               m('button.btn.btn-default', {
                 'onclick': function() {
                   stm.try(function(state) {
-                    rpapi.using(state)
+                    api(state)
                       .device(device.id)
                       .clearApp()
                       .unproject();

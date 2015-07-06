@@ -63,7 +63,7 @@ interact('.deviceActive')
     document.getElementById('device-well').classList.remove('panel-drop');
 
     stm.try(function(state) {
-      rpapi.using(state)
+      api(state)
         .device(event.target.getAttribute('data-id'))
         .loadApp(event.relatedTarget.getAttribute('data-path'));
         /*

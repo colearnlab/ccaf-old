@@ -18,7 +18,7 @@
 
   <script type="text/javascript">
     window.addEventListener('resize', m.redraw);
-    var stm, conn, rpapi, associated = false;
+    var stm, conn, api, associated = false;
     var classrooms = [];
     var classroom;
 
@@ -50,8 +50,8 @@
         });
       };
 
-      requirejs(['/lib/rpapi.js'], function(_rpapi) {
-        rpapi = _rpapi;
+      requirejs(['/lib/rpapi.js'], function(_api) {
+        api = _api;
       });
     };
   </script>
