@@ -157,7 +157,9 @@ var Home = (function() {
                       m('a', {
                         'onclick': function() {
                           stm.try(function(state) {
-                            state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(c.id))]('project', device.id);
+                            rpapi.using(state)
+                              .device(c.id)
+                              .project(device.id);
                           });
                         }
                       }, c.name)
@@ -168,17 +170,19 @@ var Home = (function() {
               m('button.btn.btn-default', {
                 'onclick': function() {
                   stm.try(function(state) {
-                    state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(device.id))]('frozen', !device.frozen);
+                    rpapi.using(state)
+                      .device(device.id)
+                      .toggleFreeze();
                   });
                 }
               }, [device.frozen ? 'Unfreeze' : 'Freeze']),
               m('button.btn.btn-default', {
                 'onclick': function() {
                   stm.try(function(state) {
-
-                    var dev = state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(device.id))];
-                    dev('app', undefined);
-                    dev('project', undefined);
+                    rpapi.using(state)
+                      .device(device.id)
+                      .clearApp()
+                      .unproject();
                   });
                 }
               }, ['Clear'])
