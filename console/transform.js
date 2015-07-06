@@ -63,9 +63,13 @@ interact('.deviceActive')
     document.getElementById('device-well').classList.remove('panel-drop');
 
     stm.try(function(state) {
+      rpapi.using(state)
+        .device(event.target.getAttribute('data-id'))
+        .loadApp(event.relatedTarget.getAttribute('data-path'));
+        /*
       var device = state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(event.target.getAttribute('data-id')))];
       device('app', event.relatedTarget.getAttribute('data-path'));
-      device('project', undefined);
+      device('project', undefined);*/
     });
   }
 });
