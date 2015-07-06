@@ -21,11 +21,10 @@ interact('.resizeTile')
   })
   .on('dragend', function(event) {
     stm.try(function(state) {
-      var device = state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(event.target.parentNode.getAttribute('data-id')))];
-      if (typeof device === 'undefined')
-        return;
-      device.location('x', 100 * 100 * event.target.parentNode.getAttribute('data-x') / (60 * document.documentElement.clientWidth));
-      device.location('y', 100 * 100 * event.target.parentNode.getAttribute('data-y') / (40 * document.documentElement.clientWidth));
+      api(state)
+        .device(event.target.parentNode.getAttribute('data-id'))
+        .attr('location.x', 100 * 100 * event.target.parentNode.getAttribute('data-x') / (60 * document.documentElement.clientWidth))
+        .attr('location.y', 100 * 100 * event.target.parentNode.getAttribute('data-y') / (40 * document.documentElement.clientWidth));
     });
   });
 
@@ -40,10 +39,10 @@ interact('.resizeTile')
   })
   .on('resizeend', function(event) {
     stm.try(function(state) {
-      var device = state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(event.target.parentNode.getAttribute('data-id')))];
-
-      device.screen('width', event.target.style.width.replace('vw', ''));
-      device.screen('height', event.target.style.height.replace('vw', ''));
+      api(state)
+        .device(event.target.parentNode.getAttribute('data-id'))
+        .attr('screen.width', event.target.style.width.replace('vw', ''))
+        .attr('screen.height', event.target.style.height.replace('vw', ''));
     });
   });
 
@@ -66,10 +65,6 @@ interact('.deviceActive')
       api(state)
         .device(event.target.getAttribute('data-id'))
         .loadApp(event.relatedTarget.getAttribute('data-path'));
-        /*
-      var device = state.devices[state('devices').map(function(d) { return d.id; }).indexOf(parseInt(event.target.getAttribute('data-id')))];
-      device('app', event.relatedTarget.getAttribute('data-path'));
-      device('project', undefined);*/
     });
   }
 });
