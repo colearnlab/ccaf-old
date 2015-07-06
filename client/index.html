@@ -2,6 +2,7 @@
 <html>
 <head>
   <script src="/lib/mithril.js"></script>
+  <script src="/lib/tuio.js"></script>
   <script src="/lib/q.min.js"></script>
   <script src="/node_modules/checkerboard/lib/checkerboard.js"></script>
   <script src="/lib/require.js"></script>
@@ -108,6 +109,8 @@
         document.title = 0;
       };
 
+      new TUIO.Client();
+
       (function() {
         var pageDirectionX;
 
@@ -179,10 +182,13 @@
             var el = reset();
 
             if (typeof device('app') !== 'undefined') {
-              requirejs(['/apps/' + device('app') + '/' + state.app('client')], function(app) {
+              var deps = ['/apps/' + device('app') + '/' + state.app('client'), '/lib/rpapi.js'];
+              if (typeof state.app('shared') !== 'undefined')
+                deps.push('/apps/' + device('app') + '/' + state.app('shared'));
+              requirejs(deps, function(app, api, shared) {
                 document.body.appendChild(el);
                 document.body.style.backgroundColor = '';
-                app.startApp(stm, el);
+                app.startApp(stm, el, api, shared);
               });
             }
           }

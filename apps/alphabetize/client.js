@@ -1,23 +1,26 @@
 define(function() {
   var exports = {};
-  var cb, parentElement;
+  var stm, parentElement, shared, api;
 
   var wordlist, currentWordlist, currentWords, alphabetizedWords, orderedWords, correct, generating = true;
   var loaded;
-  exports.startApp = function(_cb, _parentElement) {
-    cb = _cb;
+  exports.startApp = function(_stm, _parentElement, _api, _shared) {
+    stm = _stm;
     parentElement = _parentElement;
+    shared = _shared;
+    api = _api;
+
     css('/apps/alphabetize/styles.css');
 
-    cb.on('change', propegateChanges);
-    cb.on('attempt', function(state) {
+    stm.on('change', propegateChanges);
+    stm.on('attempt', function(state) {
       if (state.global.deviceState[state.device('id')]('correct') === true)
         propegateChanges(state);
     });
 
     requirejs(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
-      cb.try(function(state) {
+      stm.try(function(state) {
         if (typeof state.global('deviceState') === 'undefined')
           state.global('deviceState', {});
         if (typeof state.global.deviceState(state.device('id')) === 'undefined')
@@ -61,7 +64,7 @@ define(function() {
 
   function propegateChanges(state) {
     if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined' && generating) {
-      cb.try(function(state) {
+      stm.try(function(state) {
         generateNewWords(state);
       }).then(function(state) {
         propegateChanges(state);
@@ -135,7 +138,7 @@ define(function() {
             m('button', {
               'onclick': function(e) {
                 generating = true;
-                cb.try(function(state) {
+                stm.try(function(state) {
                   state.global.deviceState[state.device('id')]('currentWords', undefined);
                });
               }
@@ -161,7 +164,7 @@ define(function() {
 
         updateTransform(e.target, true, true, true, true);
 
-        cb.try(function(state) {
+        stm.try(function(state) {
           var words = state.global.deviceState[state.device('id')].currentWords;
           var cur = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
           cur('x', x);
@@ -178,7 +181,7 @@ define(function() {
         'accept': '.word',
         'overlap': 0.75,
         'ondragenter': function(e) {
-          cb.try(function(state) {
+          stm.try(function(state) {
             var words = state.global.deviceState[state.device('id')].currentWords;
             var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
             if (typeof holder('holderDropped') === 'undefined' || holder('holderDropped') === false) {
@@ -188,7 +191,7 @@ define(function() {
           });
         },
         'ondragleave': function(e) {
-          cb.try(function(state) {
+          stm.try(function(state) {
             var words = state.global.deviceState[state.device('id')].currentWords;
             var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
             holder('holderActive', false);
@@ -200,7 +203,7 @@ define(function() {
           });
         },
         'ondrop': function(e) {
-          cb.try(function(state) {
+          stm.try(function(state) {
             var words = state.global.deviceState[state.device('id')].currentWords;
             var holder = words[currentWords.map(function(w) { return w.index; }).indexOf(parseInt(e.target.getAttribute('data-index')))];
             if (holder('holderDropped') === false || holder('holderDropped') === parseInt(e.relatedTarget.getAttribute('data-index'))) {
