@@ -132,7 +132,7 @@ checkerboard.on('data-associate', function(conn, message) {
           'merge': function() {
             return {'device': device().merge(), 'global': device('app') in classroom.appRoot ? classroom.appRoot[device('app')]().merge() : {}, 'app': getApps()[device('app')]};
           },
-          'patch': {'device': device().patch, 'global': device('app') in classroom.appRoot ? classroom.appRoot[device('app')]().patch : {}, 'app': getApps()[device('app')]},
+          'patch': {'device': device().patch, 'global': device('app') in classroom.appRoot ? classroom.appRoot[device('app')]().patch : {}, 'app': {'$set': getApps()[device('app')]}},
           'apply': function(toApply) {
             if (device('app') in classroom.appRoot)
               classroom.appRoot[device('app')]().apply(toApply.global);
