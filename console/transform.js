@@ -10,6 +10,8 @@ function updateTransform(target) {
 interact('.resizeTile')
   .draggable({'restrict': {'restriction': '#device-well'}})
   .on('dragmove', function (event) {
+      if (event.target.parentNode === null)
+        return;
       x = (parseFloat(event.target.parentNode.getAttribute('data-x')) || 0) + event.dx;
       y = (parseFloat(event.target.parentNode.getAttribute('data-y')) || 0) + event.dy;
 
@@ -20,9 +22,14 @@ interact('.resizeTile')
       updateTransform(event.target.parentNode);
   })
   .on('dragend', function(event) {
+    if (event.target.parentNode === null)
+      return;
+
     stm.try(function(state) {
-      api(state)
-        .device(event.target.parentNode.getAttribute('data-id'))
+      var d = api(state).device(event.target.parentNode.getAttribute('data-id'));
+      if (d === null)
+        return;
+      d  
         .attr('location.x', 100 * 100 * event.target.parentNode.getAttribute('data-x') / (60 * document.documentElement.clientWidth))
         .attr('location.y', 100 * 100 * event.target.parentNode.getAttribute('data-y') / (40 * document.documentElement.clientWidth));
     });
@@ -38,9 +45,14 @@ interact('.resizeTile')
     target.style.height = event.rect.height / (document.documentElement.clientWidth / 100) + 'vw';
   })
   .on('resizeend', function(event) {
+    if (event.target.parentNode === null)
+      return;
+
     stm.try(function(state) {
-      api(state)
-        .device(event.target.parentNode.getAttribute('data-id'))
+      var d = api(state).device(event.target.parentNode.getAttribute('data-id'));
+      if (d === null)
+        return;
+      d
         .attr('screen.width', event.target.style.width.replace('vw', ''))
         .attr('screen.height', event.target.style.height.replace('vw', ''));
     });
@@ -86,7 +98,7 @@ interact('.trash')
     document.getElementById('device-well').classList.remove('panel-drop');
     stm.try(function(state) {
       var devices = state('devices');
-      var deviceIndex = state('devices').map(function(d) { return d.id; }).indexOf(parseInt(event.relatedTarget.parentNode.getAttribute('data-id')));
+      var deviceIndex = state('devices').map(function(d) { return d.id; }).indexOf(parseInt());
       devices.splice(deviceIndex, 1);
       state('devices', devices);
     });
