@@ -1,21 +1,22 @@
 define(function() {
   var exports = {};
-  var cb, parentElement;
 
-  var wordlist;
-  exports.startApp = function(_cb, _parentElement) {
-    cb = _cb;
+  var stm, parentElement, api, shared;
+
+  var wordList;
+
+  exports.startApp = function(_stm, _parentElement, _api, _shared) {
+    stm = _stm;
     parentElement = _parentElement;
+    api = _api;
+    shared = _shared;
 
-    cb.on('attempt', propegateChanges);
-    cb.on('change', propegateChanges);
+    stm.on('attempt', propegateChanges);
+    stm.on('change', propegateChanges);
 
-    requirejs(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
-      wordlist = _wordlist;
-      cb.try(function(state) {
-        if (typeof state.appRoot.alphabetize('deviceState') === 'undefined')
-          state.appRoot.alphabetize('deviceState', {});
-      }).then(propegateChanges).done();
+    requirejs(['/apps/alphabetize/wordList.js'], function(_wordList) {
+      wordList = _wordList;
+      stm.try(function() {}).then(propegateChanges).done();
     });
   };
 
@@ -53,14 +54,14 @@ define(function() {
           m('div.panel-body', [
             m('select.form-control', {
               'onchange': function(e) {
-                cb.try(function(state) {
-                  state.appRoot.alphabetize.deviceState[args.device.id]('wordlist', e.target.value);
-                  state.appRoot.alphabetize.deviceState[args.device.id]('currentWords', undefined);
+                stm.try(function(state) {
+                  state.appRoot.alphabetize.deviceState[args.device.id]('wordList', e.target.value);
+                  shared.generateNewWords(state.appRoot.alphabetize.deviceState[args.device.id], wordList);
                 });
               },
-              'value': args.state.wordlist
+              'value': args.state.wordList
             }, [
-              Object.keys(wordlist).map(function(key) {
+              Object.keys(wordList).map(function(key) {
                 return m('option', {'value': key}, [key]);
               })
             ])

@@ -1,9 +1,12 @@
 define(function() {
   var exports = {};
-  var stm, parentElement, shared, api;
 
-  var wordlist, currentWordlist, currentWords, alphabetizedWords, orderedWords, correct, generating = true;
+  var stm, parentElement, api, shared;
+
+  var wordList;
+  var currentWords, alphabetizedWords, correct;
   var loaded;
+
   exports.startApp = function(_stm, _parentElement, _api, _shared) {
     stm = _stm;
     parentElement = _parentElement;
@@ -18,18 +21,17 @@ define(function() {
         propegateChanges(state);
     });
 
-    requirejs(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
-      wordlist = _wordlist;
+    requirejs(['/apps/alphabetize/wordList.js'], function(_wordList) {
+      wordList = _wordList;
       stm.try(function(state) {
         var config = {};
         config['global.deviceState'] = {};
         config['global.deviceState.' + state.device('id')] = {};
-        config['global.deviceState.' + state.device('id') + '.wordlist'] = 'animals';
+        config['global.deviceState.' + state.device('id') + '.wordList'] = 'animals';
         config['global.deviceState.' + state.device('id') + '.numToGenerate'] = 6;
         api(state).config(config);
         if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined')
-          generateNewWords(state);
-
+          shared.generateNewWords(state.global.deviceState[state.device('id')], wordList);
       }).then(function(state) {
         loaded = true;
         propegateChanges(state);
@@ -37,72 +39,22 @@ define(function() {
     });
   };
 
-  function generateNewWords(state) {
-    var self = state.global.deviceState[state.device('id')];
-    var possibleWords = wordlist[self('wordlist')];
-    var newWords = [];
-
-    for (var i = 0, numToGenerate = self('numToGenerate'); i < numToGenerate; i++) {
-      do {
-        cur = possibleWords[Math.floor(Math.random() * possibleWords.length)];
-      } while (newWords.indexOf(cur) !== -1);
-
-      newWords.push(cur);
-    }
-
-    newWords = newWords.map(function(word, index) { return {'text': word, 'index': index, 'holderActive': false, 'holderDropped': false}; });
-    currentWordlist = state.global.deviceState[state.device('id')]('wordlist');
-
-    self('currentWords', newWords);
-    correct = self('correct', false);
-    alphabetizedWords = undefined;
-  }
-
   function propegateChanges(state) {
-    if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined' && generating) {
-      stm.try(function(state) {
-        generateNewWords(state);
-      }).then(function(state) {
-        propegateChanges(state);
-        generating = false;
-      });
-      return;
-    }
+    var self = state.global.deviceState[state.device('id')];
 
-    currentWords = state.global.deviceState[state.device('id')]('currentWords');
-    correct = state.global.deviceState[state.device('id')]('correct');
-
-    if (typeof alphabetizedWords === 'undefined') {
-      alphabetizedWords = [];
-      currentWords.forEach(function(w) {
-        alphabetizedWords.push(w);
-      });
-      alphabetizedWords.sort(function(a, b) {
-        if (a.text < b.text) return -1;
-        if (a.text > b.text) return 1;
-        return 0;
-      });
-    }
+    currentWords = self('currentWords');
+    alphabetizedWords = self('alphabetizedWords');
+    correct = self('correct');
 
     m.render(parentElement, Root);
   }
 
-  function updateTransform(el, _, _, _, force) {
-    if (parseInt(el.getAttribute('data-hold')) === 1 && !force)
-      return;
-
-    var getX = (force ? 'data-x' : 'new-x');
-    var getY = (force ? 'data-y' : 'new-y');
-    var x = parseFloat(el.getAttribute(getX));
-    var y = parseFloat(el.getAttribute(getY));
+  function updateTransform(el) {
+    var x = parseFloat(el.getAttribute('data-x'));
+    var y = parseFloat(el.getAttribute('data-y'));
 
     if (isNaN(x) || isNaN(y))
       return;
-
-    if (!force) {
-      el.setAttribute('data-x', x);
-      el.setAttribute('data-y', y);
-    }
 
     el.style.webkitTransform =
     el.style.transform =
@@ -121,8 +73,8 @@ define(function() {
               }, [
                 m.trust('&#8203;'),
                 m('span.word', {
-                  'new-x': cur.x || 0,
-                  'new-y': cur.y || 0,
+                  'data-x': cur.x || 0,
+                  'data-y': cur.y || 0,
                   'data-index': index,
                   'config': updateTransform
                 }, [cur.text])
@@ -133,9 +85,10 @@ define(function() {
             'Congratulations! ',
             m('button', {
               'onclick': function(e) {
-                generating = true;
                 stm.try(function(state) {
-                  state.global.deviceState[state.device('id')]('currentWords', undefined);
+                  shared.generateNewWords(state.global.deviceState[state.device('id')], wordList);
+               }).then(function(state) {
+                 propegateChanges(state);
                });
               }
             }, ['Try some more'])
@@ -145,7 +98,6 @@ define(function() {
     }
   };
 
-  var inertia = false;
   requirejs(['apps/alphabetize/interact.js'], function(interact) {
     interact('.word')
       .draggable({'restrict': {'restriction': '#app'}, 'inertia': true})
@@ -158,7 +110,7 @@ define(function() {
         e.target.setAttribute('data-x', x = parseFloat(e.target.getAttribute('data-x')) + e.dx);
         e.target.setAttribute('data-y', y = parseFloat(e.target.getAttribute('data-y')) + e.dy);
 
-        updateTransform(e.target, true, true, true, true);
+        updateTransform(e.target);
 
         stm.try(function(state) {
           var words = state.global.deviceState[state.device('id')].currentWords;

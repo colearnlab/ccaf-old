@@ -87,11 +87,15 @@ var App = (function(){
     },
     'view': function(ctrl) {
       return m('div#appTab' + m.route.param('subpage'), {'config': function(element, isInitialized) {
-        if (!ctrl.mounted)
-        require(['/apps/' + m.route.param('subpage') + '/' + classroom.apps[m.route.param('subpage')]('admin')], function(app) {
-          app.startApp(stm, element);
-          ctrl.mounted = true;
-        });
+        if (!ctrl.mounted) {
+          var deps = ['/apps/' + m.route.param('subpage') + '/' + classroom.apps[m.route.param('subpage')]('admin')];
+          if (typeof classroom.apps[m.route.param('subpage')]('shared') !== 'undefined')
+            deps.push('/apps/' + m.route.param('subpage') + '/' + classroom.apps[m.route.param('subpage')]('shared'));
+          require(deps, function(app, shared) {
+            app.startApp(stm, element, api, shared);
+            ctrl.mounted = true;
+          });
+        }
       }});
     }
   };
