@@ -21,16 +21,14 @@ define(function() {
     requirejs(['/apps/alphabetize/wordlist.js'], function(_wordlist) {
       wordlist = _wordlist;
       stm.try(function(state) {
-        if (typeof state.global('deviceState') === 'undefined')
-          state.global('deviceState', {});
-        if (typeof state.global.deviceState(state.device('id')) === 'undefined')
-          state.global.deviceState(state.device('id'), {});
-        if (typeof state.global.deviceState[state.device('id')]('wordlist') === 'undefined')
-          state.global.deviceState[state.device('id')]('wordlist', 'animals');
-        if (typeof state.global.deviceState[state.device('id')]('numToGenerate') === 'undefined')
-          state.global.deviceState[state.device('id')]('numToGenerate', 6);
+        var config = {};
+        config['global.deviceState'] = {};
+        config['global.deviceState.' + state.device('id')] = {};
+        config['global.deviceState.' + state.device('id') + '.wordlist'] = 'animals';
+        config['global.deviceState.' + state.device('id') + '.numToGenerate'] = 6;
+        api(state).config(config);
         if (typeof state.global.deviceState[state.device('id')]('currentWords') === 'undefined')
-          generating = true;
+          generateNewWords(state);
 
       }).then(function(state) {
         loaded = true;
@@ -41,14 +39,12 @@ define(function() {
 
   function generateNewWords(state) {
     var self = state.global.deviceState[state.device('id')];
-    var numToGenerate = self('numToGenerate');
     var possibleWords = wordlist[self('wordlist')];
-    var maxIndex = possibleWords.length;
     var newWords = [];
 
-    for (var i = 0; i < numToGenerate; i++) {
+    for (var i = 0, numToGenerate = self('numToGenerate'); i < numToGenerate; i++) {
       do {
-        cur = possibleWords[Math.floor(Math.random() * maxIndex)];
+        cur = possibleWords[Math.floor(Math.random() * possibleWords.length)];
       } while (newWords.indexOf(cur) !== -1);
 
       newWords.push(cur);

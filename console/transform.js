@@ -29,7 +29,7 @@ interact('.resizeTile')
       var d = api(state).device(event.target.parentNode.getAttribute('data-id'));
       if (d === null)
         return;
-      d  
+      d
         .attr('location.x', 100 * 100 * event.target.parentNode.getAttribute('data-x') / (60 * document.documentElement.clientWidth))
         .attr('location.y', 100 * 100 * event.target.parentNode.getAttribute('data-y') / (40 * document.documentElement.clientWidth));
     });
