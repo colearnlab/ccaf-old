@@ -226,9 +226,9 @@
             var el = reset();
 
             if (typeof device('app') !== 'undefined') {
-              var deps = ['/apps/' + device('app') + '/' + state.app('client')];
-              if (typeof state.app('shared') !== 'undefined')
-                deps.push('/apps/' + device('app') + '/' + state.app('shared'));
+              var deps = ['/apps/' + device('app') + '/' + state.apps[device('app')]('client')];
+              if (typeof state.apps[device('app')]('shared') !== 'undefined')
+                deps.push('/apps/' + device('app') + '/' + state.apps[device('app')]('shared'));
               requirejs(deps, function(_app, _shared) {
                 shared = _shared;
                 app = _app;
@@ -242,7 +242,12 @@
             document.body.style.backgroundColor = state.device('color');
             project = undefined;
             app = undefined;
-            reset();
+            var el = reset();
+            requirejs(['/apps/launcher/client.js'], function(launcher) {
+              app = launcher;
+              document.body.appendChild(el);
+              launcher.startApp(stm, el, api.createBound(device('app')));
+            });
           }
 
           m.endComputation();
@@ -303,11 +308,9 @@
   <nav class="circular-menu">
 
     <div class="circle">
-      <span data-action="close" class="glyphicon glyphicon-remove"></span>
-      <span class="glyphicon glyphicon-tree-deciduous"></span>
-      <span class="glyphicon glyphicon-tree-conifer"></span>
-
-      <span class="glyphicon glyphicon-tree-conifer"></span>
+      <span data-action="close" class="glyphicon glyphicon-remove" style="color: red"></span>
+      <span data-action="return" class="glyphicon glyphicon-arrow-left"></span>
+      <span data-action="project" class="glyphicon glyphicon-share-alt"></span>
     </div>
 
     <span class="menu-button">

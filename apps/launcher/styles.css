@@ -1,0 +1,29 @@
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+#app {
+  min-height: 100%;
+}
+
+.launcher {
+  top: 50%;
+  left: 50%;
+  margin-top: -32px;
+  margin-left: -32px;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  position: relative;
+}
+
+.launcher img {
+  position: absolute;
+}
+
+.rotator-inner {
+  position: absolute;
+  height: 64px;
+  width: 64px;
+}
