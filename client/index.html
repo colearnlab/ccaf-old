@@ -4,63 +4,10 @@
   <script src="/lib/mithril.js"></script>
   <script src="/lib/tuio.js"></script>
   <script src="/lib/q.min.js"></script>
+  <script src="/lib/interact-1.2.4.js"></script>
   <script src="/node_modules/checkerboard/lib/checkerboard.js"></script>
   <script src="/lib/require.js"></script>
-  <style>
-  .frozen { opacity: 0.25; pointer-events: none; }
-  * {cursor: none;}
-  body {
-    -webkit-backface-visibility: hidden;
-  }
-  html, body {
-    background-color: #222222;
-    overflow: hidden;
-    height: 100%;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-  #app {
-    height: 100%; width: 100%;
-  }
-  iframe {
-    border: none; height: 100%; width: 100%; min-height: 100%;
-  }
-  #menu {
-    position: absolute;
-    z-index: 1000;
-    display: inline-block;
-    height: 50px;
-    right: 25px;
-    top: 25px;
-    border-radius: 5px;
-    background-color: gray;
-    padding-left: 5px;
-  }
-
-  #menu .icon {
-    display: inline-block;
-    background-color: lightgray;
-    height: 40px;
-    width: 40px;
-    margin: 5px 5px 5px 0;
-    border-radius: 5px;
-    padding: 0;
-  }
-
-  .icon .glyphicon {
-      line-height: 38px;
-      font-size: 32px;
-  }
-
-  #close {
-    background-color: red !important;
-  }
-  </style>
-
+  <link rel="stylesheet" href="/client/styles.css" />
   <link rel="stylesheet" href="/lib/css/bootstrap.min.css" />
 
   <script type="text/javascript">
@@ -96,12 +43,109 @@
     }
 
     window.onload = function() {
-      var closeIcon = document.getElementById('close');
-      console.log(closeIcon);
-      closeIcon.style.display = parameter('electron') ? 'inline-block' : 'none';
-      closeIcon.onclick = function(e) {
-        document.title = 0;
-      };
+
+      (function() {
+        var menuButton = document.querySelector('.menu-button');
+        var timeout, toggled = false;
+
+        menuButton.ontouchstart = menuButton.onmousedown = function(e) {
+          toggled = true;
+          menuButton.classList.add('activated');
+          timeout = setTimeout(function() {
+            if (toggled) {
+              document.querySelector('.circle').classList.add('open');
+              document.querySelector('.corner-shadow').style.width = '600px';
+              document.querySelector('.corner-shadow').style.height = '700px';
+              document.querySelector('.corner-shadow').style.opacity = '0.4';
+            }
+          }, 2000);
+        }
+
+        interact('.menu-button')
+          .draggable({
+            'onmove': function(e) {
+              var x, y;
+              x = (parseFloat(e.target.getAttribute('data-x')) || 0) + e.dx;
+              y = (parseFloat(e.target.getAttribute('data-y')) || 0) + e.dy;
+
+              e.target.setAttribute('data-x', x);
+              e.target.setAttribute('data-y', y);
+
+              if (!document.querySelector('.circle').classList.contains('open') || !toggled)
+                return (toggled = x < 20 && y < 29);
+
+              e.target.style.webkitTransform =
+              e.target.style.transform =
+                'translate(' + x + 'px, ' + y + 'px)';
+
+
+            },
+            'onend': function(e) {
+              e.target.setAttribute('data-x', 0);
+              e.target.setAttribute('data-y', 0);
+
+              e.target.style.webkitTransition = e.target.style.transition = '0.25s all';
+              e.target.style.webkitTransform =
+              e.target.style.transform = '';
+              setTimeout(function() {
+                e.target.style.webkitTransition = e.target.style.transition = '';
+              }, 250);
+            }
+          })
+
+        interact('.circle span')
+          .dropzone({
+            'accept': '.menu-button',
+            'ondragenter': function(e) {
+              if (!document.querySelector('.circle').classList.contains('open'))
+                return;
+
+              e.relatedTarget.style.opacity = 0;
+              e.target.classList.add('activated');
+            },
+            'ondragleave': function(e) {
+              if (!document.querySelector('.circle').classList.contains('open'))
+                return;
+
+              e.relatedTarget.style.opacity = 1;
+              e.target.classList.remove('activated');
+            },
+            'ondrop': function(e) {
+              if (!document.querySelector('.circle').classList.contains('open'))
+                return;
+
+              e.relatedTarget.style.opacity = 1;
+              e.target.classList.remove('activated');
+
+              switch (e.target.getAttribute('data-action')) {
+                case "close": document.title = 0;
+              }
+            },
+            'ondropdeactivate': function(e) {
+              e.relatedTarget.style.opacity = 1;
+              e.target.classList.remove('activated');
+            }
+          })
+
+        menuButton.ontouchend = menuButton.onmouseup = function(e) {
+          toggled = false;
+          menuButton.classList.remove('activated');
+          clearTimeout(timeout);
+          setTimeout(function() {
+            document.querySelector('.circle').classList.remove('open');
+            document.querySelector('.corner-shadow').style.width = '450px';
+            document.querySelector('.corner-shadow').style.height = '550px';
+            document.querySelector('.corner-shadow').style.opacity = '0.25';
+          }, 50);
+        }
+
+        var items = document.querySelectorAll('.circle span');
+
+        for(var i = 0, l = items.length; i < l; i++) {
+          items[i].style.left = (50 - 75*Math.cos(-(Math.PI / 2) * Math.PI - 2*(1/(3*l))*i*Math.PI)).toFixed(4) + "%";
+          items[i].style.top = (50 + 75*Math.sin(-(Math.PI / 2) * Math.PI - 2*(1/(3*l))*i*Math.PI)).toFixed(4) + "%";
+        }
+      }());
 
       new TUIO.Client();
 
@@ -177,9 +221,6 @@
           else if (device('app') !== savedApp) {
             if (typeof app !== 'undefined' && typeof app.unload === 'function')
               app.unload();
-
-            if (typeof shared !== 'undefined' && typeof shared.cleanApp === 'function')
-              shared.cleanApp(stm, document.getElementById('app'), api, shared);
 
             savedApp = device('app');
             var el = reset();
@@ -258,10 +299,22 @@
   </script>
 </head>
 <body oncontextmenu="return false">
-<div id="menu">
-  <div class="icon" id="return">&nbsp;<span class="glyphicon glyphicon-eject"></span></div>
-  <div class="icon" id="close">&nbsp;<span class="glyphicon glyphicon-remove"></span></div>
-</div>
+  <div class="corner-shadow">&nbsp;</div>
+  <nav class="circular-menu">
+
+    <div class="circle">
+      <span data-action="close" class="glyphicon glyphicon-remove"></span>
+      <span class="glyphicon glyphicon-tree-deciduous"></span>
+      <span class="glyphicon glyphicon-tree-conifer"></span>
+
+      <span class="glyphicon glyphicon-tree-conifer"></span>
+    </div>
+
+    <span class="menu-button">
+      <span class="glyphicon glyphicon-lock"></span>
+    </div>
+
+  </nav>
 <div id="app"></div>
 </body>
 </html>
