@@ -92,7 +92,7 @@ var App = (function(){
           if (typeof classroom.apps[m.route.param('subpage')]('shared') !== 'undefined')
             deps.push('/apps/' + m.route.param('subpage') + '/' + classroom.apps[m.route.param('subpage')]('shared'));
           require(deps, function(app, shared) {
-            app.startApp(stm, element, api, shared);
+            app.startApp(stm, element, api.createBound(m.route.param('subpage')), shared);
             ctrl.mounted = true;
           });
         }

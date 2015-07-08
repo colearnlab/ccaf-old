@@ -64,12 +64,6 @@
   <link rel="stylesheet" href="/lib/css/bootstrap.min.css" />
 
   <script type="text/javascript">
-    // apps are implemented very simply.
-    // they are stored in /apps/appId. the file icon contains their icon. main.js is a require module
-    // that exports start(stm) and onchange(state) functions. apps place their content in the #app div.
-    // they can load css using css(url) and javascript using require([url], function(module) {}).
-    // apps can find their appId in the state root.
-
     var stm, conn, associated = false;
     var classrooms = [];
 
@@ -188,7 +182,7 @@
               requirejs(deps, function(app, api, shared) {
                 document.body.appendChild(el);
                 document.body.style.backgroundColor = '';
-                app.startApp(stm, el, api, shared);
+                app.startApp(stm, el, api.createBound(device('app')), shared);
               });
             }
           }

@@ -14,7 +14,7 @@ define(function() {
     stm.on('attempt', propegateChanges);
     stm.on('change', propegateChanges);
 
-    requirejs(['/apps/alphabetize/wordList.js'], function(_wordList) {
+    requirejs([api.appPath + 'wordList.js'], function(_wordList) {
       wordList = _wordList;
       stm.try(function() {}).then(propegateChanges).done();
     });
@@ -26,7 +26,7 @@ define(function() {
         acc[device.id] = device;
       return acc;
     }, []);
-    var deviceState = state.appRoot.alphabetize('deviceState');
+    var deviceState = api(state).appRoot()('deviceState');
     m.render(parentElement, m.component(Root, {'deviceState': deviceState, 'devices': devices}));
   }
 
@@ -55,8 +55,8 @@ define(function() {
             m('select.form-control', {
               'onchange': function(e) {
                 stm.try(function(state) {
-                  state.appRoot.alphabetize.deviceState[args.device.id]('wordList', e.target.value);
-                  shared.generateNewWords(state.appRoot.alphabetize.deviceState[args.device.id], wordList);
+                  api(state).appRoot().deviceState[args.device.id]('wordList', e.target.value);
+                  shared.generateNewWords(api(state).appRoot().deviceState[args.device.id], wordList);
                 });
               },
               'value': args.state.wordList
