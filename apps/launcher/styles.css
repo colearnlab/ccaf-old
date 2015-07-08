@@ -18,11 +18,11 @@ html, body {
   position: relative;
 }
 
-.launcher img {
+.launcher span img {
   position: absolute;
 }
 
-.rotator-inner {
+.rotator-inner, .rotator-outer {
   position: absolute;
   height: 64px;
   width: 64px;

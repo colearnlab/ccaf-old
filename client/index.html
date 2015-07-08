@@ -43,7 +43,7 @@
     }
 
     window.onload = function() {
-
+      var menuLoaded;
       (function() {
         var menuButton = document.querySelector('.menu-button');
         var timeout, toggled = false;
@@ -77,8 +77,6 @@
               e.target.style.webkitTransform =
               e.target.style.transform =
                 'translate(' + x + 'px, ' + y + 'px)';
-
-
             },
             'onend': function(e) {
               e.target.setAttribute('data-x', 0);
@@ -118,7 +116,8 @@
               e.target.classList.remove('activated');
 
               switch (e.target.getAttribute('data-action')) {
-                case "close": document.title = 0;
+                case 'close': document.title = 0; break;
+                case 'return': if (menuLoaded) stm.try(function(state) { state.device('app', undefined); }); break;
               }
             },
             'ondropdeactivate': function(e) {
@@ -195,7 +194,7 @@
           api = _api;
         });
         var project;
-        stm.on('change', function (state) {
+        function update(state) {
           m.startComputation();
 
           var device = state.device;
@@ -218,39 +217,49 @@
             el.appendChild(frame);
             document.body.appendChild(el);
           }
-          else if (device('app') !== savedApp) {
-            if (typeof app !== 'undefined' && typeof app.unload === 'function')
-              app.unload();
+          else if (device('app') !== savedApp && typeof device('app') !== 'undefined') {
+            if (typeof app !== 'undefined' && typeof app.unloadApp === 'function')
+              app.unloadApp();
 
             savedApp = device('app');
             var el = reset();
 
-            if (typeof device('app') !== 'undefined') {
-              var deps = ['/apps/' + device('app') + '/' + state.apps[device('app')]('client')];
-              if (typeof state.apps[device('app')]('shared') !== 'undefined')
-                deps.push('/apps/' + device('app') + '/' + state.apps[device('app')]('shared'));
-              requirejs(deps, function(_app, _shared) {
-                shared = _shared;
-                app = _app;
-                document.body.appendChild(el);
-                document.body.style.backgroundColor = '';
-                app.startApp(stm, el, api.createBound(device('app')), _shared);
-              });
-            }
+            var deps = ['/apps/' + device('app') + '/' + state.apps[device('app')]('client')];
+            if (typeof state.apps[device('app')]('shared') !== 'undefined')
+              deps.push('/apps/' + device('app') + '/' + state.apps[device('app')]('shared'));
+            requirejs(deps, function(_app, _shared) {
+              shared = _shared;
+              app = _app;
+              document.body.appendChild(el);
+              document.body.style.backgroundColor = '';
+              app.startApp(stm, el, api.createBound(device('app')), _shared);
+            });
           }
           else if (typeof device('project') === 'undefined' && typeof device('app') === 'undefined') {
             document.body.style.backgroundColor = state.device('color');
             project = undefined;
             app = undefined;
+            savedApp = undefined;
             var el = reset();
             requirejs(['/apps/launcher/client.js'], function(launcher) {
               app = launcher;
               document.body.appendChild(el);
-              launcher.startApp(stm, el, api.createBound(device('app')));
+              launcher.startApp(stm, el, api.createBound('launcher'));
             });
           }
 
           m.endComputation();
+        }
+
+        stm.on('change', function(state) {
+          if (state.device('app') !== savedApp)
+            menuLoaded = false;
+          update(state);
+        });
+        stm.on('attempt', function(state) {
+          if (state.device('app') !== savedApp)
+            menuLoaded = true;
+          update(state);
         });
       };
     }

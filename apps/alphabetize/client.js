@@ -5,7 +5,7 @@ define(function() {
 
   var wordList;
   var currentWords, alphabetizedWords, correct;
-  var loaded;
+  var loaded, interactables = [];
 
   exports.startApp = function(_stm, _parentElement, _api, _shared) {
     stm = _stm;
@@ -38,6 +38,9 @@ define(function() {
 
   exports.unloadApp = function() {
     stm.removeListener('change', propegateChanges);
+    interactables.forEach(function(intr) {
+      intr.unset();
+    });
   };
 
   function propegateChanges(state) {
@@ -103,7 +106,7 @@ define(function() {
   };
 
   function initInteract(interact) {
-    interact('.word')
+    interactables[0] = interact('.word')
       .draggable({'restrict': {'restriction': '#app'}, 'inertia': true})
       .on('dragstart', function(e) {
         e.target.setAttribute('data-hold', 1);
@@ -128,7 +131,7 @@ define(function() {
       })
       .preventDefault('never');
 
-      interact('.wordHolder')
+      interactables[1] = interact('.wordHolder')
       .dropzone({
         'accept': '.word',
         'overlap': 0.75,
