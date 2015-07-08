@@ -26,5 +26,11 @@ define(function() {
     deviceState('correct', false);
   };
 
+  exports.cleanApp = function(stm, parentElement, api, shared) {
+    stm.try(function(state) {
+      state.global.deviceState(state.device('id'), undefined);
+    });
+  };
+
   return exports;
 });

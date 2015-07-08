@@ -146,7 +146,10 @@
           stm.sync(250);
         });
 
-        var savedApp;
+        var savedApp, app, api, shared;
+        requirejs(['/lib/rpapi.js'], function(_api) {
+          api = _api;
+        });
         var project;
         stm.on('change', function (state) {
           m.startComputation();
@@ -172,17 +175,25 @@
             document.body.appendChild(el);
           }
           else if (device('app') !== savedApp) {
+            if (typeof app !== 'undefined' && typeof app.unload === 'function')
+              app.unload();
+
+            if (typeof shared !== 'undefined' && typeof shared.cleanApp === 'function')
+              shared.cleanApp(stm, document.getElementById('app'), api, shared);
+
             savedApp = device('app');
             var el = reset();
 
             if (typeof device('app') !== 'undefined') {
-              var deps = ['/apps/' + device('app') + '/' + state.app('client'), '/lib/rpapi.js'];
+              var deps = ['/apps/' + device('app') + '/' + state.app('client')];
               if (typeof state.app('shared') !== 'undefined')
                 deps.push('/apps/' + device('app') + '/' + state.app('shared'));
-              requirejs(deps, function(app, api, shared) {
+              requirejs(deps, function(_app, _shared) {
+                shared = _shared;
+                app = _app;
                 document.body.appendChild(el);
                 document.body.style.backgroundColor = '';
-                app.startApp(stm, el, api.createBound(device('app')), shared);
+                app.startApp(stm, el, api.createBound(device('app')), _shared);
               });
             }
           }
