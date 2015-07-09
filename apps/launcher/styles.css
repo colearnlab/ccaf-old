@@ -18,6 +18,29 @@ html, body {
   position: relative;
 }
 
+.launcher span {
+  position: absolute;
+  height: 112px;
+  width: 112px;
+  padding: 24px;
+  background-color: rgba(255, 255, 255, 0.25);
+  border: 2px black solid;
+  border-radius: 50%;
+}
+
+.icon-activated {
+  border-color: white !important;
+}
+
+.icon-opened1 {
+  box-shadow: 0px 0px 0px 0px white !important;
+  transition: box-shadow 0.5s;
+}
+
+.icon-opened2 {
+  box-shadow: 0px 0px 10px 2000px white !important;
+}
+
 .launcher span img {
   position: absolute;
 }

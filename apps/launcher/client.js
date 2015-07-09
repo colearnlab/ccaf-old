@@ -21,28 +21,54 @@ define(function() {
     'view': function(_, apps) {
         return (
           m('nav.launcher', [
-            m('.rotator-inner', [
+            m('.rotator-inner', {
+              'data-rotate': 0
+            }, [
               Object.keys(apps)
                 .filter(function(app, index) {
                   return (!('exclude' in apps[app] && apps[app].exclude === true) && index < 7);
                 })
                 .map(function(app, index, a) {
                   var multiplier = Math.floor(Math.pow(index + 1, 1/3));
-                  var top = (- multiplier*250*Math.cos(-0.5 * Math.PI - 2*(1/(multiplier === 1 ? Math.min(7, a.length) : a.length - 7))*index*Math.PI)).toFixed(4);
-                  var left = (+ multiplier*250*Math.sin(-0.5 * Math.PI - 2*(1/(multiplier === 1 ? Math.min(7, a.length) : a.length - 7))*index*Math.PI)).toFixed(4);
+                  var top = (-40- multiplier*250*Math.cos(-0.5 * Math.PI - 2*(1/(multiplier === 1 ? Math.min(7, a.length) : a.length - 7))*index*Math.PI)).toFixed(4);
+                  var left = (-40+ multiplier*250*Math.sin(-0.5 * Math.PI - 2*(1/(multiplier === 1 ? Math.min(7, a.length) : a.length - 7))*index*Math.PI)).toFixed(4);
                   var angle = Math.atan2(top, left) * (180 / Math.PI) - 90;
 
-                  return m('span',
+                  return m('span', {
+                    'style':
+                      'top: ' + top + '%; ' +
+                      'left: ' + left + '%; ' +
+                      'box-shadow: -5px 5px 5px black'
+                    },
                     m('img', {
                       'style':
-                        'top: ' + top + '%; ' +
-                        'left: ' + left + '%; ' +
                         'transform: rotate(' + angle + 'deg)',
                       'src': '/apps/' + app + '/' + apps[app].icon,
-                      'onclick': function() {
-                        stm.try(function(state) {
-                          state.device('app', app);
-                        });
+                      'onmousedown': function(e) {
+                        e.target.parentNode.classList.add('icon-activated');
+                      },
+                      'ontouchstart': function(e) {
+                        e.target.parentNode.classList.add('icon-activated');
+                      },
+                      'ontouchend': function(e) {
+                        e.target.parentNode.classList.remove('icon-activated');
+                        if (parseInt(e.target.parentNode.parentNode.getAttribute('data-rotate')) < 20) {
+                          e.target.parentNode.classList.add('icon-opened1');
+                          e.target.parentNode.classList.add('icon-opened2');
+                          stm.try(function(state) {
+                            state.device('app', app);
+                          });
+                        }
+                      },
+                      'onmouseup': function(e) {
+                        e.target.parentNode.classList.remove('icon-activated');
+                        if (parseInt(e.target.parentNode.parentNode.getAttribute('data-rotate')) < 20) {
+                          e.target.parentNode.classList.add('icon-opened1');
+                          e.target.parentNode.classList.add('icon-opened2');
+                          stm.try(function(state) {
+                            state.device('app', app);
+                          });
+                        }
                       }
                     })
                   );
@@ -103,14 +129,25 @@ define(function() {
       targetAngle *= -1;
 
     angle += targetAngle;
+    e.target.setAttribute('data-rotate', parseFloat(e.target.getAttribute('data-rotate')) + targetAngle);
     e.target.setAttribute('data-angle', angle);
     e.target.style.transform = 'rotate(' + angle + 'deg)';
+
+    for (var i = 0; i < e.target.childNodes.length; i++) {
+      e.target.childNodes[i].style.boxShadow = -5 * Math.cos((angle + 45) * Math.PI / 180) + 'px ' + 5 * Math.sin((angle + 45) * Math.PI / 180) + 'px 5px black';
+    }
   }
 
   interact('.rotator-inner, .rotator-outer')
     .draggable({
       'inertia': true,
-      'onmove': onmove
+      'onmove': onmove,
+      'onend': function(e) {
+        e.target.setAttribute('data-rotate', 0);
+        for (var i = 0; i < e.target.childNodes.length; i++) {
+          e.target.childNodes[i].classList.remove('icon-activated');
+        }
+      }
     });
 
   return exports;
