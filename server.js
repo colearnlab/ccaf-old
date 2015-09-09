@@ -48,7 +48,7 @@ addresses.forEach(function(address) {
   setInterval(function() {
     var message = new Buffer(JSON.stringify({'ports': config.ports}));
     dgramClient.send(message, 0, message.length, config.ports.udp, ip.subnet(address, config.subnet).broadcastAddress);
-  }, 1000);
+  }, 100);
 });
 
 console.log('UDP port: ' + config.ports.udp);
