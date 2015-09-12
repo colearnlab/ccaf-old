@@ -1,0 +1,11 @@
+require.config({
+  'paths': {
+    'clientUtil': '/client/modules/clientUtil',
+    'interact': '/lib/interact-1.2.4',
+    'mithril': '/lib/mithril',
+    'atomizejs': '/lib/atomize',
+    'cereal': '/lib/cereal',
+    'compat': '/lib/compat',
+    'socksjs': '/lib/socksjs-client'
+  }
+});

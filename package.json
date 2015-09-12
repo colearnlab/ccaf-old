@@ -3,10 +3,11 @@
   "version": "0.2.0",
   "main": "client.js",
   "dependencies": {
-    "caress-server": "^0.2.1",
-    "checkerboard": "^0.2.0",
-    "express": "^4.12.4",
-    "ip": "^0.3.3"
+    "checkerboard": "^0.2.4",
+    "connect": "^1.9.2",
+    "epictuio": "0.0.1",
+    "ip": "^0.3.3",
+    "ws": "^0.8.0"
   },
   "devDependencies": {
     "electron-packager": "^4.2.0",
