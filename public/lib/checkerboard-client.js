@@ -203,7 +203,7 @@
         
     var proxy = this.proxy;
     this.subs.forEach(function(sub) {
-      sub(proxy, patch);
+      sub(JSON.parse(JSON.stringify(proxy)), patch);
     });
   }
 
@@ -234,10 +234,10 @@
     }
     if (components.length === 1) {
       this.data[components[0]].subs.push(fn);
-      fn(this.data[components[0]].proxy);
+      fn(JSON.parse(JSON.stringify(this.data[components[0]].proxy)));
     }
     else
-      this.data[components[0]].subscribe(components.slice(1));
+      this.data[components[0]].subscribe(components.slice(1), fn);
   };
 
   DiffableStateHelper.prototype.unsubscribe = function(path, fn) {
@@ -246,7 +246,7 @@
     if (components.length === 1)
       dsh.subs.splice(dsh.subs.indexOf(fn), 1);
     else
-      dsh.subscribe(components.slice(1));
+      dsh.unsubscribe(components.slice(1), fn);
   }
 
   var DiffableState = Checkerboard.DiffableState = function(_data, root, rootProp, flagSet) {       
