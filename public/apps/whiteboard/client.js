@@ -129,7 +129,6 @@ define(['clientUtil'], function(clientUtil) {
   function update(root) {
     console.log(version, root.version);
     if (root.version !== version) {
-      console.log('screen cleared');
       clearScreen();
       version = root.version;
     }
@@ -140,16 +139,8 @@ define(['clientUtil'], function(clientUtil) {
     });
     
     for (var prop in root.paths) {
-      if (prop in currentlyDrawing) return;
-      if (prop in paths) {
-        paths[prop].X.push.apply(root.paths[prop].X.slice(paths[prop].X.lenth));
-        paths[prop].Y.push.apply(root.paths[prop].Y.slice(paths[prop].Y.lenth));
-        drawPath(paths[prop]);
-      }
-      else {
         paths[prop] = PathFactory(root.paths[prop]);
         drawPath(paths[prop]);
-      }
     }
   }
 
