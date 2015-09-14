@@ -3,7 +3,8 @@ require.config({
     'interact': '/lib/interact-1.2.4',
     'mithril': '/lib/mithril',
     'q': '/lib/q.min',
-    'checkerboard': '/lib/checkerboard-client'
+    'checkerboard': '/lib/checkerboard-client',
+    'jsondiffpatch': '/lib/jsondiffpatch'
   }
 });
 
@@ -29,10 +30,7 @@ define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './corn
   }
   
   var appData, appElement;
-  var appChange = function(_appData, change) {
-    if  (typeof change.path === 'undefined')
-      return;
-
+  var appChange = function(_appData) {
     appData = _appData;
     requirejs(['/apps/' + appData.path + '/' + appData.client], function(app) {
 
@@ -42,7 +40,7 @@ define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './corn
         if (typeof state.classrooms[classroom].appRoot[appData.path] === 'undefined')
           state.classrooms[classroom].appRoot[appData.path] = {};
       }).then(function() {
-        cb.sync(500);
+        cb.sync(250);
         app.startApp(new clientUtil.CheckerboardStem(cb, 'classrooms.' + classroom + '.appRoot.' + appData.path), document.getElementById('app'),
           {'classroom': classroom, 'device': device});
       }).done();

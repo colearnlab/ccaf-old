@@ -4,56 +4,62 @@ define(['clientUtil'], function(clientUtil) {
 
   var canvas, ctx, touchToPath, paths, version, pen, lastPath = [], version;
   
-  function Path(props) {
+  function PathFactory(props) {
+    var obj = {};
     if (arguments.length === 0) {
-      this.X = [];
-      this.Y = [];
-      this.pen = pen;
-      this.strokeFinished = false;
-      this.id = Math.floor((1 + Math.random()) * 0x10000000).toString(16);
-      this.lastPoint = null;
+      obj.X = [];
+      obj.Y = [];
+      obj.pen = pen;
+      obj.strokeFinished = false;
+      obj.id = Math.floor((1 + Math.random()) * 0x10000000).toString(16);
+      obj.lastPoint = null;
+      
+      return obj;
     } else {
       for (var p in props)
-        this[p] = props[p];
+        obj[p] = props[p];
       
-      this.lastPoint = 0;
+      obj.lastPoint = 0;
       
-      this.draw();
+      drawPath(obj);
+      
+      return obj;
     }
   }
   
-  Path.prototype.add = function(x, y) {
+ addToPath = function(path, x, y) {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
       return;
     
-    this.X.push(x);
-    this.Y.push(y);
+    path.X.push(x);
+    path.Y.push(y);
+    
+    drawPath(path);
   }
 
-  Path.prototype.draw = function() {
-    ctx.strokeStyle = this.pen.strokeStyle;
+  drawPath = function(path) {
+    ctx.strokeStyle = path.pen.strokeStyle;
     ctx.lineJoin = "round";
-    ctx.lineWidth = this.pen.lineWidth;
+    ctx.lineWidth = path.pen.lineWidth;
     
     var startX, startY;
-    for (var i = (this.lastPoint || 0); i < this.X.length; i++) {
-      startX = this.X[i-1] || this.X[i]-1;
-      startY = this.Y[i-1] || this.Y[i];
+    for (var i = (path.lastPoint || 0); i < path.X.length; i++) {
+      startX = path.X[i-1] || path.X[i]-1;
+      startY = path.Y[i-1] || path.Y[i];
       ctx.beginPath();
 
       ctx.moveTo(startX, startY);
 
-      ctx.lineTo(this.X[i], this.Y[i]);
+      ctx.lineTo(path.X[i], path.Y[i]);
       ctx.closePath();
       ctx.stroke();
     }
     
-    this.lastPoint = this.X.length;
+    path.lastPoint = path.X.length;
   }
 
 
   exports.startApp = function(_appRoot, _parentElement, _params) {
-    console.log('hi');
     appRoot = _appRoot;
     parentElement = _parentElement;
     params = _params;
@@ -79,34 +85,30 @@ define(['clientUtil'], function(clientUtil) {
 
     canvas.ontouchstart = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        var p = touchToPath[ct.identifier] = new Path();
-        p.add(ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop);
-        appRoot.try(function(root) {
-          root.deviceState[params.device].paths[p.id] = p;
-        });
+        var p = touchToPath[ct.identifier] = PathFactory();
+        addToPath(p, ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop);
       });
     };
 
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        touchToPath[ct.identifier].add(ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop);
-        var p = touchToPath[ct.identifier];
+        addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop);
+       /* var p = touchToPath[ct.identifier];
         appRoot.try(function(root) {
           if (typeof root.deviceState[params.device].paths[p.id] === 'undefined')
             return;
           root.deviceState[params.device].paths[p.id].X = p.X;
           root.deviceState[params.device].paths[p.id].Y = p.Y;
-        });
+        }); */
       });
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var p = touchToPath[ct.identifier];
+        p.strokeFinished = true;
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[p.id].strokeFinished = true;
-        }).then(function(state) {
-          lastPath.push(p.id);
+          root.deviceState[params.device].paths[p.id] = p;
         });
       });
     };
@@ -118,20 +120,35 @@ define(['clientUtil'], function(clientUtil) {
         root.deviceState[params.device] = {'paths': {}, 'version': 0}
     })
     .then(function() {
+      appRoot.get('deviceState.' + params.device, update);
       appRoot.subscribe('deviceState.' + params.device, update);
     }).done();
   };
 
-  function update(root, change) {
-    for (var prop in change.paths) {
+  var version;
+  function update(root) {
+    console.log(version, root.version);
+    if (root.version !== version) {
+      console.log('screen cleared');
+      clearScreen();
+      version = root.version;
+    }
+    
+    var currentlyDrawing = {};
+    touchToPath.forEach(function(path) {
+      currentlyDrawing[path.id] = true;
+    });
+    
+    for (var prop in root.paths) {
+      if (prop in currentlyDrawing) return;
       if (prop in paths) {
-        paths[prop].X = change.paths[prop].X;
-        paths[prop].Y = change.paths[prop].Y;
-        paths[prop].draw();
+        paths[prop].X.push.apply(root.paths[prop].X.slice(paths[prop].X.lenth));
+        paths[prop].Y.push.apply(root.paths[prop].Y.slice(paths[prop].Y.lenth));
+        drawPath(paths[prop]);
       }
       else {
-        paths[prop] = new Path(change.paths[prop]);
-        paths[prop].draw();
+        paths[prop] = PathFactory(root.paths[prop]);
+        drawPath(paths[prop]);
       }
     }
   }
@@ -155,31 +172,17 @@ define(['clientUtil'], function(clientUtil) {
           m('button.btn.btn-default.btn-lg', {
             'onclick': function() {
               document.body.classList.add('frozen');
-              cb.try(function(state) {
-                var self = state.global.deviceState[state.device('id')];
-                self('paths', {});
-                self('version', self('version') + 1);
+              appRoot.try(function(root) {
+                root.deviceState[params.device].paths = {};
+                root.deviceState[params.device].version++;
               }).then(function(state) {
                 document.body.classList.remove('frozen');
-                paths = state.global.deviceState[state.device('id')]('paths');
+                paths = {};
                 clearScreen();
-                for (var p in paths)
-                  paths[p].draw();
               });
             }
           }, ['Clear']),
           m('span.spacer1', [m.trust('&nbsp;')]),
-          m('button.btn.btn-default.btn-lg', {
-            'onclick': function() {
-              var myPath = lastPath.pop();
-              if (typeof myPath === 'undefined')
-                return;
-              cb.try(function(state) {
-                var self = state.global.deviceState[state.device('id')];
-                self.paths(myPath, null);
-              }).then(update);
-            }
-          }, ['Undo']),
           m('span.spacer1', [m.trust('&nbsp;')]),
           m('span.input-group', [
             m('input[type=range].form-control.input-lg', {

@@ -1,7 +1,7 @@
 (function() {
 
   var WebSocket = require('./node_modules/ws/index.js');
-  var Checkerboard = require('./public/lib/checkerboard-client.js').Checkerboard;
+  var jsondiffpatch = require('jsondiffpatch');
 
   module.exports.createServer = function(port, inputState, refreshRate) {
     var Event = new (require('events').EventEmitter)();
@@ -11,7 +11,7 @@
 
     var WebSocketServer = new WebSocket.Server({'port': port});
 
-    var state = new Checkerboard.DiffableState(inputState || {});
+    var state = inputState || {};
 
     // external
     Event.state = state;
@@ -30,14 +30,19 @@
     Event.on('close', function(conn) {
       conns.splice(conns.indexOf(conn), 1);
     });
+    
+    Event.on('data-get', function(conn, message) {
+      conn.sendObj('data-get-returned', {'data': getByPath(state, message.path), 'id': message.id});
+    });
 
     Event.on('data-attempt-state', function(conn, message) {
       var lastAttempt;
+      var oldState = JSON.parse(JSON.stringify(state));
       conn.attempting = true;
       var someFailed = message.attempts.some(function(attempt) {
-        if (oneWayDiff(state.proxy, attempt.diff)) {
+        if (true) {
           lastAttempt = attempt.id;
-          state.merge(attempt.patch);
+          jsondiffpatch.patch(state, attempt.patch);
           return false;
         }
         else
@@ -45,33 +50,23 @@
       });
       conn.sendObj('data-attempts-returned', {'lastAttempt': lastAttempt});
       conn.attempting = false;
+      
+      var diff = jsondiffpatch.diff(oldState, state);
+      for (var i = 0; i < conns.length; i++) {
+        for (var j = 0; j < conns[i].subs.length; j++) {
+          if (getByPath(diff, conns[i].subs[j]) !== null)
+            conns[i].sendObj('data-update-state', {'patch': diff});
+        }
+      }
     });
     
     Event.on('data-subscribe', function(conn, message) {
-      state.subscribe(message.path, conn.subs[message.id] = function(data, change) {
-        if (conn.attempting)
-          return;
-        var components = message.path.split('.');
-        var leafParent = {};
-        var leafProp = components[components.length - 1];
-        var root;
-        for (var i = components.length - 1; i >= 0; i--) {
-          var n = {};
-          n[components[i]] = root || leafParent;
-          root = n;
-          if (i === components.length - 1)
-            leafParent = root;
-        }
-        if (typeof change === 'undefined')
-          leafParent[leafProp] = data;
-        else
-          leafParent[leafProp] = change;
-        conn.enqueue('data-update-state', {'patch': root});
-      });
+      conn.subs.push(message.path);
+      conn.sendObj('data-update-state', {'patch': jsondiffpatch.diff({}, state)});
     });
     
     Event.on('data-unsubscribe', function(conn, message) {
-      state.unsubscribe(message.path, conn.subs[message.id]);
+      conn.subs.splice(conn.subs.indexOf(message.path), 1);
     });
 
     WebSocketServer.on('connection', function(conn) {
@@ -120,24 +115,6 @@
     return Event;
   };
   
-  function oneWayDiff(origin, comparand) {
-    if (!(isPOJS(origin) && isPOJS(comparand)))
-      return false;
-    
-    var comp;
-    for (var prop in comparand) {
-      comp = (isPOJS(comparand[prop]) && '$undefined' in comparand[prop]) ? undefined : comparand[prop];
-      if (isPOJS(origin[prop]) || isPOJS(comp))
-        return oneWayDiff(origin[prop], comp);
-      else if (typeof comp !== typeof origin[prop])
-        return false;
-      else if (comp !== origin[prop])
-        return false;
-    }
-    
-    return true;
-  }
-  
   function isPOJS(prop) {
     return !(
       prop instanceof Date ||
@@ -147,6 +124,30 @@
       typeof prop === 'object' &&
       prop !== null;
   }
+   
+  function getByPath(obj, keyPath){ 
+   
+      var keys, keyLen, i=0, key;
+   
+      obj = obj || window;      
+      keys = keyPath && keyPath.split(".");
+      keyLen = keys && keys.length;
+   
+      while(i < keyLen && obj){
+   
+          key = keys[i];        
+          obj = (typeof obj.get == "function") 
+                      ? obj.get(key)
+                      : obj[key];                    
+          i++;
+      }
+   
+      if(i < keyLen){
+          obj = null;
+      }
+   
+      return obj;
+  };
 
   // http://stackoverflow.com/a/2117523
   function uuid() {

@@ -6,7 +6,7 @@ define(function() {
   exports.controller = function(args) {
     var classrooms = m.prop({});
     m.startComputation();
-    args.cb.subscribe('classrooms', fnRef = function(data) {
+    args.cb.get('classrooms', fnRef = function(data) {
       classrooms(data);
       m.endComputation();
     });
@@ -48,7 +48,6 @@ define(function() {
               return m('a.list-group-item', {
                 'onclick': function() {
                   args.callback(ctrl.selectedClassroom(), deviceId);
-                  args.cb.unsubscribe('classrooms', fnRef);
                 }
               }, ctrl.classrooms()[ctrl.selectedClassroom()].devices[deviceId].name)
             })

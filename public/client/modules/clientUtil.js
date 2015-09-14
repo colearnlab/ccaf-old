@@ -17,13 +17,29 @@ define('clientUtil', [], function() {
     return results === null ? null : decodeURIComponent(results[1].replace(/\+/g, " "));  
   };
   
-  function getToPath(root, path) {
-    var components = typeof path === "string" ? path.split('.') : path;
-    if (components.length === 1)
-      return root[components[0]];
-    else
-      return getToPath(root[components[0]], components.slice(1));
-  }
+  function getByPath(obj, keyPath){ 
+   
+      var keys, keyLen, i=0, key;
+   
+      obj = obj || window;      
+      keys = keyPath && keyPath.split(".");
+      keyLen = keys && keys.length;
+   
+      while(i < keyLen && obj){
+   
+          key = keys[i];        
+          obj = (typeof obj.get == "function") 
+                      ? obj.get(key)
+                      : obj[key];                    
+          i++;
+      }
+   
+      if(i < keyLen){
+          obj = null;
+      }
+   
+      return obj;
+  };
   
   var CheckerboardStem = exports.CheckerboardStem = function(root,  path) {
     this.root = root;
@@ -33,9 +49,12 @@ define('clientUtil', [], function() {
   CheckerboardStem.prototype.try = function(callback) {
     var path = this.path;
     return this.root.try(function(state) {
-      var p = getToPath(state, path);
-      callback(p);
+      callback(getByPath(state, path));
     });
+  };
+  
+  CheckerboardStem.prototype.get = function(path, callback) {
+    return this.root.get(this.path + '.' + path, callback);
   };
   
   CheckerboardStem.prototype.subscribe = function(path, callback) {
