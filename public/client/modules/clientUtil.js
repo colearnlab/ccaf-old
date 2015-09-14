@@ -18,12 +18,11 @@ define('clientUtil', [], function() {
   };
   
   function getToPath(root, path) {
-    var cur = root;
     var components = typeof path === "string" ? path.split('.') : path;
     if (components.length === 1)
       return root[components[0]];
     else
-      return getToPath(root[components[0]], path.slice(1));
+      return getToPath(root[components[0]], components.slice(1));
   }
   
   var CheckerboardStem = exports.CheckerboardStem = function(root,  path) {
@@ -32,8 +31,10 @@ define('clientUtil', [], function() {
   }
   
   CheckerboardStem.prototype.try = function(callback) {
-    this.root.try(function(state) {
-      callback(getToPath(state, this.path));
+    var path = this.path;
+    return this.root.try(function(state) {
+      var p = getToPath(state, path);
+      callback(p);
     });
   };
   

@@ -1,8 +1,6 @@
-define(function() {
+define(['clientUtil'], function(clientUtil) {
   var exports = {};
-  var cb, parentElement;
-
-  var loaded;
+  var appRoot, parentElement, params;
 
   var canvas, ctx, touchToPath, paths, version, pen, lastPath = [], version;
   
@@ -56,11 +54,12 @@ define(function() {
   }
 
 
-  exports.startApp = function(_appRoot, _parentElement) {
-    cb = _cb;
+  exports.startApp = function(_appRoot, _parentElement, _params) {
+    appRoot = _appRoot;
     parentElement = _parentElement;
+    params = _params;
 
-    css('/apps/whiteboard/styles.css');
+    clientUtil.css('/apps/whiteboard/styles.css');
 
     canvas = document.createElement('canvas');
     canvas.width = window.innerWidth;
@@ -71,6 +70,13 @@ define(function() {
     paths = {};
     pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
     clearScreen();
+    
+    parentElement.appendChild(canvas);
+
+    var controls = document.createElement('div');
+    m.mount(controls, Controls);
+
+    parentElement.appendChild(controls);
 
     canvas.ontouchstart = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
@@ -89,59 +95,29 @@ define(function() {
       [].forEach.call(e.changedTouches, function(ct) {
         var p = touchToPath[ct.identifier];
         p.drawn = true;
-        cb.try(function(state) {
-          state.global.deviceState[state.device('id')].paths[p.id] = p;
+        appRoot.try(function(root) {
+          root.deviceState[params.device].paths[p.id] = p;
         }).then(function(state) {
           lastPath.push(p.id);
         });
       });
     };
 
-    cb.try(function(state) {
-      if (typeof state.global('deviceState') === 'undefined')
-        state.global('deviceState', {});
-      if (typeof state.global.deviceState(state.device('id')) === 'undefined')
-        state.global.deviceState(state.device('id'), {});
-      if (typeof state.global.deviceState[state.device('id')]('paths') === 'undefined')
-        state.global.deviceState[state.device('id')]('paths', {});
-      if (typeof state.global.deviceState[state.device('id')]('version') === 'undefined')
-        state.global.deviceState[state.device('id')]('version', 0);
-    }).then(update).done();
-
-    cb.on('change', update);
-
-    parentElement.appendChild(canvas);
-
-    var controls = document.createElement('div');
-    m.mount(controls, Controls);
-
-    parentElement.appendChild(controls);
+   appRoot.try(function(root) {
+      if (typeof root.deviceState === 'undefined')
+        root.deviceState = {};
+      if (typeof root.deviceState[params.device] === 'undefined')
+        root.deviceState[params.device] = {'paths': {}, 'version': 0}
+    })
+    .then(function() {
+      appRoot.subscribe('deviceState.' + params.device, update);
+    }).done();
   };
 
-  function update(state) {
-    if (state.global.deviceState[state.device('id')]('version') !== version) {
-      clearScreen();
-      version = state.global.deviceState[state.device('id')]('version');
-    }
-    
-    var sPaths = state.global.deviceState[state.device('id')]('paths');
-    var redrawFlag = false;
-    for (var p in sPaths) {
-      if (!(p in paths) && sPaths[p] !== null)
-        paths[p] = new Path(sPaths[p]);
-       
-      if (sPaths[p] === null) {
-        redrawFlag = true;
-        delete paths[p];
-      }
-    }
-    
-    if (redrawFlag) {
-      clearScreen();
-      for (var p in paths) {
-        paths[p].lastPoint = 0;
-        paths[p].draw();
-      }
+  function update(root, change) {
+    for (var prop in change.paths) {
+      paths[prop] = new Path(change.paths[prop]);
+      paths[prop].draw();
     }
   }
 

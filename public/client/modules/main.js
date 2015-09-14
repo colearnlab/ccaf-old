@@ -8,11 +8,16 @@ require.config({
 });
 
 define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu'], function(checkerboard, m, clientUtil, selector, cornerMenu) {
-  var ws = new WebSocket('ws://localhost:1808');
+  var ws = new WebSocket('ws://localhost:1808'), cb;
     
+  document.body.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    return false;
+  });
+  
   ws.onopen = function() {
     cb = new checkerboard(ws);
-    m.mount(document.body, main);
+    m.mount(document.getElementById('navs'), main);
   };
     
   var selected = false, classroom, device;
@@ -21,26 +26,32 @@ define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './corn
     classroom = _classroom;
     device = _device;
     cb.subscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange);
-    cb.subscribe('classrooms.' + classroom + '.appRoot', appUpdate);
   }
   
-  var appData;
-  var appChange = function(_appData) {
+  var appData, appElement;
+  var appChange = function(_appData, change) {
+    if  (typeof change.path === 'undefined')
+      return;
+      
     appData = _appData;
     requirejs(['/apps/' + appData.path + '/' + appData.client], function(app) {
-      app.startApp(new clientUtil.CheckerboardStem(cb, 'classroom'. + classroom + '.appRoot'));
+      cb.try(function(state) {
+        if (typeof state.classrooms[classroom].appRoot === 'undefined')
+          state.classrooms[classroom].appRoot = {};
+        if (typeof state.classrooms[classroom].appRoot[appData.path] === 'undefined')
+          state.classrooms[classroom].appRoot[appData.path] = {};
+      }).then(function() {
+        app.startApp(new clientUtil.CheckerboardStem(cb, 'classrooms.' + classroom + '.appRoot.' + appData.path), document.getElementById('app'),
+          {'classroom': classroom, 'device': device});
+      }).done();
     });
-  }
-  
-  var appUpdate = function(data, change) {
-  
   };
   
   var main = {
     'view': function() {
       return m('div', [
         m.component(cornerMenu),
-        !selected ? m.component(selector, {'cb': cb, 'callback': onSelect}) : m('div#app')
+        !selected ? m.component(selector, {'cb': cb, 'callback': onSelect}) : ''
       ]);
     }
   };  

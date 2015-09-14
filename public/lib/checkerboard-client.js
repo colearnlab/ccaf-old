@@ -24,7 +24,7 @@
           if (!(attempts[i].id <= message.lastAttempt))
             break;
           state.merge(attempts[i].patch);
-          attempts[i].deferred.resolve();
+          attempts[i].deferred.resolve(state.proxy);
         }
         attempts.splice(0, i);
         waitingForReturn = false;
@@ -42,6 +42,7 @@
       var deferred = Q.defer();
       var attempt = new Attempt(callback, deferred);
       attempts.push(attempt);
+      this.sync();
       return deferred.promise;
     };
     
@@ -106,6 +107,7 @@
     var sync = this.sync = function(interval) {
       if (interval === null) {
         clearInterval(intervalHandle);
+        intervalHandle = null;
         return;
       }
       else if (typeof interval !== 'undefined') {
@@ -128,7 +130,7 @@
           attempts[i].id = transactionId++
           tryableAttempts.push(attempts[i]);
         } else {
-          attempts[i].deferred.resolve();
+          attempts[i].deferred.resolve(state.proxy);
           attempts.splice(i, 1);
         }
       }
@@ -162,11 +164,13 @@
       prop !== null;
   }
 
-  function DiffableStateHelper(proxy, data, diff, patch, flagSet, dsGet, dsSet) {
+  function DiffableStateHelper(proxy, data, diff, patch, propegateDiff, propegatePatch, flagSet, dsGet, dsSet) {
     this.proxy = proxy;
     this.data = data;
     this.diff = diff;
     this.patch = patch;
+    this.propegateDiff = propegateDiff;
+    this.propegatePatch = propegatePatch;
     this.flagSet = flagSet;
     this.dsGet = dsGet;
     this.dsSet = dsSet;
@@ -175,6 +179,9 @@
   }
 
   DiffableStateHelper.prototype.reset = function() {
+    for (var prop in this.data)
+      if (this.data[prop] instanceof DiffableStateHelper)
+        this.data[prop].reset();
     for (var prop in this.diff)
       if (this.diff.hasOwnProperty(prop) && prop !== 'undefined')
         delete this.diff[prop];
@@ -190,31 +197,23 @@
       if (patch.hasOwnProperty(prop) && prop !== 'toJSON') {
         var cur = patch[prop];
         if (isPOJS(cur) && '$set' in cur)
-          this.data[prop] = isPOJS(cur['$set']) ? (new DiffableState(cur['$set'], {'diff': this.diff, 'patch': this.patch}, prop)) : cur['$set'];
+          this.data[prop] = isPOJS(cur['$set']) ? (new DiffableState(cur['$set'], {'diff': this.diff, 'patch': this.patch, 'propegateDiff': this.propegateDiff, 'propegatePatch': this.propegatePatch}, prop)) : cur['$set'];
         else if (isPOJS(cur) && this.data[prop] instanceof DiffableStateHelper) {
           this.data[prop].merge(cur);
         }
         else if (isPOJS(cur))
-          this.data[prop] = new DiffableState(cur, {'diff': this.diff, 'patch': this.patch}, prop);
+          this.data[prop] = new DiffableState(cur, {'diff': this.diff, 'patch': this.patch, 'propegateDiff': this.propegateDiff, 'propegatePatch': this.propegatePatch}, prop);
         else
           this.data[prop] = cur;
           
         this.proxy.__defineGetter__(prop, this.dsGet.bind(this.proxy, prop));
         this.proxy.__defineSetter__(prop, this.dsSet.bind(this.proxy, prop));
       }
-      
-      if (patch === this.patch)
-        delete this.patch[prop];
     }
-    
-    if (patch === this.patch)
-      for (var prop in this.diff)
-        if (this.diff.hasOwnProperty(prop) && prop !== 'toJSON')
-          delete this.diff[prop];
         
     var proxy = this.proxy;
     this.subs.forEach(function(sub) {
-      sub(JSON.parse(JSON.stringify(proxy)), patch);
+      sub(JSON.parse(JSON.stringify(proxy)), JSON.parse(JSON.stringify(proxy)));
     });
   }
 
@@ -260,70 +259,70 @@
       dsh.unsubscribe(components.slice(1), fn);
   }
 
+  var Diff = function() {}
+  Diff.prototype.toJSON = function() {
+  var cpy = {};
+    for (var prop in this)
+        cpy[prop] = this[prop];
+        
+  return cpy;
+  };
+  
+  var Patch = function() {}
+  Patch.prototype.toJSON = function() {
+    var cpy = {};
+    for (var prop in this)
+        cpy[prop] = this[prop] instanceof DiffableStateHelper ? this[prop].proxy : this[prop];
+        
+    return cpy;
+  };
+
   var DiffableState = Checkerboard.DiffableState = function(_data, root, rootProp, flagSet) {       
     var proxy = _data instanceof Array ? [] : {};
-    proxy.toJSON = function() {
-      var cpy = new proxy.constructor();
-      for (var prop in proxy)
-        if (proxy.hasOwnProperty(prop))
-          cpy[prop] = dsGet(prop, true);
-      return cpy;
-    };
     
     var data = {};
-    var diff = {};
-    var patch = {};
-    
-    diff.toJSON = function() {
-      var cpy = {};
-        for (var prop in diff)
-          if (diff.hasOwnProperty(prop) && prop !== 'toJSON')
-            cpy[prop] = diff[prop];
-            
-      return cpy;
-    };
-    
-    patch.toJSON = function() {
-      var cpy = {};
-      for (var prop in patch)
-        if (patch.hasOwnProperty(prop) && prop !== 'toJSON')
-          cpy[prop] = patch[prop];
-          
-      return cpy;
-    };
+    var diff = new Diff();
+    var patch = new Patch();
     
     var dsGet = function (prop, noSides) {
-      if (!(prop in diff) && !noSides && !flagSet) {
-        diff[prop] = data[prop] instanceof DiffableStateHelper ? data[prop].proxy : (typeof data[prop] !== 'undefined' ? data[prop] : {'$undefined': null});
-        if (typeof root !== 'undefined')
-          root.diff[rootProp] = diff;
-      }
-      
       var toReturn = patch[prop] || data[prop];
-      return toReturn instanceof DiffableStateHelper ? toReturn.proxy : isPOJS(toReturn) && '$set' in toReturn ? toReturn.$set : toReturn;
+      return toReturn instanceof DiffableStateHelper ? '$set' in toReturn.proxy ? toReturn.proxy.$set : toReturn.proxy : toReturn;
     };
       
     var dsSet = function(prop, value) {
-      var c = isPOJS(value) ? (new DiffableState(value, {'diff': diff, 'patch': patch}, prop, true)) : value    
-      patch.__defineGetter__(prop, function() {
-        return c instanceof DiffableStateHelper ? (c.flagSet ? {'$set': c.proxy} : c.proxy) : (typeof c !== 'undefined' ? c : {'$undefined': null});
-      });
+      propegateDiff();
+      propegatePatch();
+
+      patch[prop] = isPOJS(value) ? (new DiffableState(value, {'diff': diff, 'patch': patch, 'propegateDiff': propegateDiff, 'propegatePatch': propegatePatch}, prop, true)) : value    
+
       proxy.__defineGetter__(prop, dsGet.bind(proxy, prop));
       proxy.__defineSetter__(prop, dsSet.bind(proxy, prop));
       
-      if (typeof root !== 'undefined')
-        root.patch[rootProp] = patch;
       
       return dsGet(prop);
     };
+    
+    var propegateDiff = function() {
+      if (typeof root !== 'undefined') {
+        root.diff[rootProp] = diff;
+        root.propegateDiff();
+      }
+    };
+    
+    var propegatePatch = function() {
+      if (typeof root !== 'undefined') {
+        root.patch[rootProp] = patch;
+        root.propegatePatch();
+      }
+    }
         
     for (var prop in _data) {
-      data[prop] = isPOJS(_data[prop]) ? (new DiffableState(_data[prop], {'diff': diff, 'patch': patch}, prop)) : _data[prop];
+      data[prop] = isPOJS(_data[prop]) ? (new DiffableState(_data[prop], {'diff': diff, 'patch': patch, 'propegateDiff': propegateDiff, 'propegatePatch': propegatePatch}, prop)) : _data[prop];
       proxy.__defineGetter__(prop, dsGet.bind(proxy, prop));
       proxy.__defineSetter__(prop, dsSet.bind(proxy, prop));
     }
       
-    return new DiffableStateHelper(proxy, data, diff, patch, flagSet, dsGet, dsSet);
+    return new DiffableStateHelper(proxy, data, diff, patch, propegateDiff, propegatePatch, flagSet, dsGet, dsSet);
   };
   
   if (typeof define !== 'undefined')
