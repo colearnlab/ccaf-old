@@ -9,7 +9,7 @@ define(['clientUtil'], function(clientUtil) {
       this.X = [];
       this.Y = [];
       this.pen = pen;
-      this.drawn = false;
+      this.strokeFinished = false;
       this.id = Math.floor((1 + Math.random()) * 0x10000000).toString(16);
       this.lastPoint = null;
     } else {
@@ -28,8 +28,6 @@ define(['clientUtil'], function(clientUtil) {
     
     this.X.push(x);
     this.Y.push(y);
-    
-    this.draw();
   }
 
   Path.prototype.draw = function() {
@@ -55,6 +53,7 @@ define(['clientUtil'], function(clientUtil) {
 
 
   exports.startApp = function(_appRoot, _parentElement, _params) {
+    console.log('hi');
     appRoot = _appRoot;
     parentElement = _parentElement;
     params = _params;
@@ -82,21 +81,30 @@ define(['clientUtil'], function(clientUtil) {
       [].forEach.call(e.changedTouches, function(ct) {
         var p = touchToPath[ct.identifier] = new Path();
         p.add(ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop);
+        appRoot.try(function(root) {
+          root.deviceState[params.device].paths[p.id] = p;
+        });
       });
     };
 
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         touchToPath[ct.identifier].add(ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop);
+        var p = touchToPath[ct.identifier];
+        appRoot.try(function(root) {
+          if (typeof root.deviceState[params.device].paths[p.id] === 'undefined')
+            return;
+          root.deviceState[params.device].paths[p.id].X = p.X;
+          root.deviceState[params.device].paths[p.id].Y = p.Y;
+        });
       });
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var p = touchToPath[ct.identifier];
-        p.drawn = true;
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[p.id] = p;
+          root.deviceState[params.device].paths[p.id].strokeFinished = true;
         }).then(function(state) {
           lastPath.push(p.id);
         });
@@ -116,8 +124,15 @@ define(['clientUtil'], function(clientUtil) {
 
   function update(root, change) {
     for (var prop in change.paths) {
-      paths[prop] = new Path(change.paths[prop]);
-      paths[prop].draw();
+      if (prop in paths) {
+        paths[prop].X = change.paths[prop].X;
+        paths[prop].Y = change.paths[prop].Y;
+        paths[prop].draw();
+      }
+      else {
+        paths[prop] = new Path(change.paths[prop]);
+        paths[prop].draw();
+      }
     }
   }
 

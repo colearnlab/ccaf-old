@@ -42,7 +42,8 @@
       var deferred = Q.defer();
       var attempt = new Attempt(callback, deferred);
       attempts.push(attempt);
-      this.sync();
+      if (intervalHandle === null)
+        this.sync();
       return deferred.promise;
     };
     
@@ -124,6 +125,7 @@
         state.update();
         attempts[i].diff = JSON.parse(JSON.stringify(state.diff));
         attempts[i].patch = JSON.parse(JSON.stringify(state.patch));
+        state.merge();
         state.reset();
         
         if (Object.keys(attempts[i].patch).length > 0) {
@@ -164,8 +166,9 @@
       prop !== null;
   }
 
-  function DiffableStateHelper(proxy, data, diff, patch, propegateDiff, propegatePatch, flagSet, dsGet, dsSet) {
+  function DiffableStateHelper(proxy, env, data, diff, patch, propegateDiff, propegatePatch, flagSet, dsGet, dsSet) {
     this.proxy = proxy;
+    this.env = env;
     this.data = data;
     this.diff = diff;
     this.patch = patch;
@@ -182,12 +185,8 @@
     for (var prop in this.data)
       if (this.data[prop] instanceof DiffableStateHelper)
         this.data[prop].reset();
-    for (var prop in this.diff)
-      if (this.diff.hasOwnProperty(prop) && prop !== 'undefined')
-        delete this.diff[prop];
-    for (var prop in this.patch)
-      if (this.patch.hasOwnProperty(prop) && prop !== 'undefined')
-        delete this.patch[prop];
+    this.env.diff = new Diff();
+    this.env.patch = new Patch();
   }
 
   DiffableStateHelper.prototype.merge = function(_patch) {
@@ -280,12 +279,14 @@
   var DiffableState = Checkerboard.DiffableState = function(_data, root, rootProp, flagSet) {       
     var proxy = _data instanceof Array ? [] : {};
     
-    var data = {};
-    var diff = new Diff();
-    var patch = new Patch();
+    var env = {
+      'data': {},
+      'diff': new Diff(),
+      'patch': new Patch()
+    }
     
     var dsGet = function (prop, noSides) {
-      var toReturn = patch[prop] || data[prop];
+      var toReturn = env.patch[prop] || env.data[prop];
       return toReturn instanceof DiffableStateHelper ? '$set' in toReturn.proxy ? toReturn.proxy.$set : toReturn.proxy : toReturn;
     };
       
@@ -293,36 +294,35 @@
       propegateDiff();
       propegatePatch();
 
-      patch[prop] = isPOJS(value) ? (new DiffableState(value, {'diff': diff, 'patch': patch, 'propegateDiff': propegateDiff, 'propegatePatch': propegatePatch}, prop, true)) : value    
+      env.patch[prop] = isPOJS(value) ? (new DiffableState(value, {'diff': env.diff, 'patch': env.patch, 'propegateDiff': propegateDiff, 'propegatePatch': propegatePatch}, prop, true)) : value    
 
       proxy.__defineGetter__(prop, dsGet.bind(proxy, prop));
       proxy.__defineSetter__(prop, dsSet.bind(proxy, prop));
-      
       
       return dsGet(prop);
     };
     
     var propegateDiff = function() {
       if (typeof root !== 'undefined') {
-        root.diff[rootProp] = diff;
+        root.diff[rootProp] = env.diff;
         root.propegateDiff();
       }
     };
     
     var propegatePatch = function() {
       if (typeof root !== 'undefined') {
-        root.patch[rootProp] = patch;
+        root.patch[rootProp] = env.patch;
         root.propegatePatch();
       }
     }
         
     for (var prop in _data) {
-      data[prop] = isPOJS(_data[prop]) ? (new DiffableState(_data[prop], {'diff': diff, 'patch': patch, 'propegateDiff': propegateDiff, 'propegatePatch': propegatePatch}, prop)) : _data[prop];
+      env.data[prop] = isPOJS(_data[prop]) ? (new DiffableState(_data[prop], {'diff': env.diff, 'patch': env.patch, 'propegateDiff': propegateDiff, 'propegatePatch': propegatePatch}, prop)) : _data[prop];
       proxy.__defineGetter__(prop, dsGet.bind(proxy, prop));
       proxy.__defineSetter__(prop, dsSet.bind(proxy, prop));
     }
       
-    return new DiffableStateHelper(proxy, data, diff, patch, propegateDiff, propegatePatch, flagSet, dsGet, dsSet);
+    return new DiffableStateHelper(proxy, env, env.data, env.diff, env.patch, propegateDiff, propegatePatch, flagSet, dsGet, dsSet);
   };
   
   if (typeof define !== 'undefined')

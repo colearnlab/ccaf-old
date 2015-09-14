@@ -32,15 +32,17 @@ define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './corn
   var appChange = function(_appData, change) {
     if  (typeof change.path === 'undefined')
       return;
-      
+
     appData = _appData;
     requirejs(['/apps/' + appData.path + '/' + appData.client], function(app) {
+
       cb.try(function(state) {
         if (typeof state.classrooms[classroom].appRoot === 'undefined')
           state.classrooms[classroom].appRoot = {};
         if (typeof state.classrooms[classroom].appRoot[appData.path] === 'undefined')
           state.classrooms[classroom].appRoot[appData.path] = {};
       }).then(function() {
+        cb.sync(500);
         app.startApp(new clientUtil.CheckerboardStem(cb, 'classrooms.' + classroom + '.appRoot.' + appData.path), document.getElementById('app'),
           {'classroom': classroom, 'device': device});
       }).done();
