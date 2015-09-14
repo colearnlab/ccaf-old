@@ -8,7 +8,7 @@ require.config({
 });
 
 define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu'], function(checkerboard, m, clientUtil, selector, cornerMenu) {
-  var ws = new WebSocket('ws://localhost:1808'), cb;
+  var ws = new WebSocket('ws://' + window.location.hostname + ':' + (clientUtil.parameter('port') || '1808')), cb;
     
   document.body.addEventListener('touchmove', function(e) {
     e.preventDefault();
