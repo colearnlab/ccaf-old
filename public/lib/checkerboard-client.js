@@ -50,7 +50,7 @@
     
     this.get = function(path, callback) {
       var proxy, that = this, got = false;
-      this.subscribe(path, proxy = function(data, change) {
+      return this.subscribe(path, proxy = function(data, change) {
         if (!got) {
           callback(data, change);
           that.unsubscribe(path, proxy);
@@ -68,15 +68,25 @@
         else
           callback(data, change);
       });
-      subs[path] = {'id': subIdentifier, 'proxy': proxy, 'callback': callback};
+      if (typeof subs[path] !== 'undefined')
+        subs[path].push({'id': subIdentifier, 'proxy': proxy, 'callback': callback});
+      else
+        subs[path] = [{'id': subIdentifier, 'proxy': proxy, 'callback': callback}];
+      
       this.send('data-subscribe', {'path': path, 'id': subIdentifier++});
+      return subIdentifier;
     };
     
     this.unsubscribe = function(path, callback) {
       var sub;
       for (var prop in subs) {
-        if (subs[prop].callback = callback) {
-          sub = subs[prop];
+        if (typeof subs[prop] === 'undefined')
+          continue;
+        for (var i = 0; i < subs[prop].length; i++) {
+          if (subs[prop][i].callback === callback) {
+            sub = subs[prop][i];
+            subs[prop].splice(i, 1);
+          } 
         }
       }
       state.unsubscribe(path, sub.proxy);
@@ -181,8 +191,9 @@
         var cur = patch[prop];
         if (isPOJS(cur) && '$set' in cur)
           this.data[prop] = isPOJS(cur['$set']) ? (new DiffableState(cur['$set'], {'diff': this.diff, 'patch': this.patch}, prop)) : cur['$set'];
-        else if (isPOJS(cur) && this.data[prop] instanceof DiffableStateHelper)
+        else if (isPOJS(cur) && this.data[prop] instanceof DiffableStateHelper) {
           this.data[prop].merge(cur);
+        }
         else if (isPOJS(cur))
           this.data[prop] = new DiffableState(cur, {'diff': this.diff, 'patch': this.patch}, prop);
         else

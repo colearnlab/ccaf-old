@@ -8,23 +8,27 @@ require.config({
 });
 
 define('main', ['checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu'], function(checkerboard, m, clientUtil, selector, cornerMenu) {
-  var ws = new WebSocket('ws://localhost:1808'), cb;
+  var ws = new WebSocket('ws://localhost:1808');
     
   ws.onopen = function() {
     cb = new checkerboard(ws);
     m.mount(document.body, main);
   };
-  
-  var selected = false;
-  var onSelect = function(classroom, device) {
+    
+  var selected = false, classroom, device;
+  var onSelect = function(_classroom, _device) {
     selected = true;
+    classroom = _classroom;
+    device = _device;
     cb.subscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange);
     cb.subscribe('classrooms.' + classroom + '.appRoot', appUpdate);
   }
   
-  var appChange = function(appData) {
+  var appData;
+  var appChange = function(_appData) {
+    appData = _appData;
     requirejs(['/apps/' + appData.path + '/' + appData.client], function(app) {
-      
+      app.startApp(new clientUtil.CheckerboardStem(cb, 'classroom'. + classroom + '.appRoot'));
     });
   }
   

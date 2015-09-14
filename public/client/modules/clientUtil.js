@@ -17,5 +17,33 @@ define('clientUtil', [], function() {
     return results === null ? null : decodeURIComponent(results[1].replace(/\+/g, " "));  
   };
   
+  function getToPath(root, path) {
+    var cur = root;
+    var components = typeof path === "string" ? path.split('.') : path;
+    if (components.length === 1)
+      return root[components[0]];
+    else
+      return getToPath(root[components[0]], path.slice(1));
+  }
+  
+  var CheckerboardStem = exports.CheckerboardStem = function(root,  path) {
+    this.root = root;
+    this.path = path;
+  }
+  
+  CheckerboardStem.prototype.try = function(callback) {
+    this.root.try(function(state) {
+      callback(getToPath(state, this.path));
+    });
+  };
+  
+  CheckerboardStem.prototype.subscribe = function(path, callback) {
+    return this.root.subscribe(this.path + '.' + path, callback); 
+  };
+  
+  CheckerboardStem.prototype.unsubscribe = function(path, callback) {
+    return this.root.unsubscribe(this.path + '.' + path, callback);
+  };
+  
   return exports;
 });

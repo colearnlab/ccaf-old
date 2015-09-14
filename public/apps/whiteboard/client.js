@@ -56,7 +56,7 @@ define(function() {
   }
 
 
-  exports.startApp = function(_cb, _parentElement, _rootPath) {
+  exports.startApp = function(_appRoot, _parentElement) {
     cb = _cb;
     parentElement = _parentElement;
 
