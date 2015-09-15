@@ -1,4 +1,4 @@
-require.config({
+requirejs.config({
   'paths': {
     'interact': '/lib/interact-1.2.4',
     'mithril': '/lib/mithril',

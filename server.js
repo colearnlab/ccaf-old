@@ -47,7 +47,7 @@ console.log('Websocket port: ' + config.ports.ws);
 var connect = require('connect');
 var app = connect();
 
-app.use('/', connect.static(__dirname + '/public/client')).use(connect.static(__dirname + '/public')).listen(config.ports.http);
+app.use(connect.logger()).use('/', connect.static(__dirname + '/public/client')).use(connect.static(__dirname + '/public')).listen(config.ports.http);
 
 console.log('HTTP port: ' + config.ports.http);
 

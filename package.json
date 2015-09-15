@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "electron-packager": "^4.2.0",
+    "flatten-packages": "^0.1.4",
     "nexe": "^0.4.0"
   },
   "scripts": {
