@@ -1,26 +1,29 @@
 requirejs.config({
   'paths': {
-    'interact': '/lib/interact-1.2.4',
+    'interact': '/lib/interact-1.2.5',
     'mithril': '/lib/mithril',
     'q': '/lib/q.min',
     'checkerboard': '/lib/checkerboard-client',
     'jsondiffpatch': '/lib/jsondiffpatch',
-    'cookies': '/lib/cookies'
+    'cookies': '/lib/cookies',
+    'modal': '/client/modules/modal'
   }
 });
 
 module = null;
 
-define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu', 'cookies'], function(exports, checkerboard, m, clientUtil, selector, cornerMenu, cookies) {  
+define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu', 'cookies', 'modal'], function(exports, checkerboard, m, clientUtil, selector, cornerMenu, cookies, modal) {  
   var ws = new WebSocket('ws://' + window.location.hostname + ':' + (clientUtil.parameter('port') || '1808'));
   var cb;
-  
-  if (clientUtil.parameter('electron'))
+    
+  if (clientUtil.parameter('electron')) {
     require('ipc').send('client-connected');
+    require('electron-cookies');
+  }
   
   document.body.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    return false;
+    if (e.target.tagName !== 'INPUT')
+      return e.preventDefault(), false;
   });
   
   ws.onopen = function() {
@@ -32,6 +35,8 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
   };
   
   var rec = ws.onclose = function() {
+    document.getElementById('app').classList.add('frozen');
+    modal.display('Disconnected. Trying to reconnect...');
     document.body.classList.add('disconnected');
     ws = new WebSocket('ws://' + window.location.hostname + ':' + (clientUtil.parameter('port') || '1808'));
     ws.onopen = function() {
@@ -56,6 +61,9 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     device = _device;
     cookies.setItem('classroom', classroom);
     cookies.setItem('device', device);
+    cb.get('classrooms', function(classrooms) {
+      modal.display('Connected to:<br>' + classrooms[classroom].name + '<br>' + classrooms[classroom].devices[device].name);
+    });
     cb.get('classrooms.' + classroom + '.devices.' + device + '.app', function(data) {
       appChange(data);
       cb.subscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange);
@@ -71,8 +79,10 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     var links = document.getElementsByClassName('app-css');
     while(links.length > 0)
         document.head.removeChild(links[0]);
-        
+
     m.mount(document.getElementById('navs'), main);
+  
+    appData = {};
   };
   
   var appData, appElement;
