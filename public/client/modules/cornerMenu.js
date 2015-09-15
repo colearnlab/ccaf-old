@@ -1,4 +1,4 @@
-define(['mithril', 'interact'], function(m, interact) {
+define(['clientUtil', 'mithril', 'interact', './main'], function(clientUtil, m, interact, main) {
   var timeout, toggled = false;
   var exports = {};
   
@@ -21,6 +21,9 @@ define(['mithril', 'interact'], function(m, interact) {
           }),
           m('span.glyphicon.glyphicon-arrow-left', {
             'data-action': 'return'
+          }),
+          m('span.glyphicon.glyphicon-phone', {
+            'data-action': 'resetIdentity'
           }),
           m('span.glyphicon.glyphicon-share-alt', {
             'data-action': 'project'
@@ -112,8 +115,9 @@ define(['mithril', 'interact'], function(m, interact) {
         e.target.classList.remove('activated');
 
         switch (e.target.getAttribute('data-action')) {
-          case 'close': document.title = 0; break;
-          case 'return': if (menuLoaded) stm.try(function(state) { state.device('app', undefined); }); break;
+          case 'close': if (clientUtil.parameter('electron')) require('ipc').send('close-window'); break;
+          case 'resetIdentity': main.resetIdentity(); break;
+          case 'return': break;
         }
       },
       'ondropdeactivate': function(e) {

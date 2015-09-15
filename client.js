@@ -21,7 +21,8 @@ var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(
   "server": "localhost"
 };
 
-var tuio = new (require('epictuio'))({'oscHost': '0.0.0.0', 'oscPort': 3333, 'raw': true});
+var epictuio = require('epictuio');
+var tuio = new epictuio({'oscHost': '0.0.0.0', 'oscPort': 3333, 'raw': true});
 tuio.on('raw', function(data) {
 if (loaded)
   mainWindow.webContents.send('tuio', new Bundle(data.slice(2, data.length)));

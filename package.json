@@ -18,6 +18,6 @@
   "scripts": {
     "package-server": "node_modules/.bin/nexe -i ././server.js -o server.exe -r latest -F nodejs",
     "package-client": "node_modules/.bin/electron-packager ././ client --out=out --ignore=\"(apps|console|client\\index\\.html|lib|node_modules\\checkerboard|node_modules\\express|node_modules\\nexe|tmp|embedded\\.db|server\\.js|server\\.json)\" --version=0.28.3 --platform=win32 --arch=x64",
-    "package-all": "npm run package-server & npm run package-client"
+    "package-all": "npm install && flatten-packages && npm run package-server & npm run package-client"
   }
 }

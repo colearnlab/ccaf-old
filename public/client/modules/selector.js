@@ -1,12 +1,10 @@
-define(function() {
+define(['./main'], function(main) {
   var exports = {};
-  
-  var fnRef;
-  
-  exports.controller = function(args) {
+    
+  exports.controller = function() {
     var classrooms = m.prop({});
     m.startComputation();
-    args.cb.get('classrooms', fnRef = function(data) {
+    main.cb.get('classrooms', function(data) {
       classrooms(data);
       m.endComputation();
     });
@@ -17,7 +15,7 @@ define(function() {
     }
   };
   
-  exports.view = function(ctrl, args) {
+  exports.view = function(ctrl) {
     if (ctrl.state() === 0) {
       return (
         m('div.row', [
@@ -47,7 +45,7 @@ define(function() {
                 
               return m('a.list-group-item', {
                 'onclick': function() {
-                  args.callback(ctrl.selectedClassroom(), deviceId);
+                  main.setIdentity(ctrl.selectedClassroom(), deviceId);
                 }
               }, ctrl.classrooms()[ctrl.selectedClassroom()].devices[deviceId].name)
             })
