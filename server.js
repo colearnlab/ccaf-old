@@ -29,6 +29,7 @@ var dgramClient = dgram.createSocket('udp4');
 dgramClient.bind(config.ports.udp, function() {
   dgramClient.setBroadcast(true);
   dgramClient.setMulticastTTL(128);
+  console.log('UDP port: ' + config.ports.udp);
 });
 
 addresses.forEach(function(address) {
@@ -38,8 +39,6 @@ addresses.forEach(function(address) {
     dgramClient.send(message, 0, message.length, config.ports.udp, ip.subnet(address, config.subnet).broadcastAddress);
   }, 100);
 });
-
-console.log('UDP port: ' + config.ports.udp);
 
 var checkerboard = (require('./checkerboard-server')).createServer(config.ports.ws, db, 250);
 console.log('Websocket port: ' + config.ports.ws);

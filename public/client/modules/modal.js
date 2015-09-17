@@ -18,7 +18,7 @@ define('modal', ['mithril', 'clientUtil'], function(m, clientUtil) {
     }
   }
   
-  clientUtil.css('/client/modal.css');
+  clientUtil.css('/client/modal.css', true);
   
   exports.display = function(text) {
     var container;

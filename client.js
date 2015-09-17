@@ -79,16 +79,13 @@ app.on('ready', function() {
   });
 
   socket.bind(config.ports.udp);
-  socket.on('listening', function() {
-    socket.setBroadcast(true);
-  });
 
   setTimeout(function() {
     if (!loaded) {
       mainWindow.loadUrl('http://' + config.server + ':' + config.ports.http + '/?port=' + config.ports.ws + '&electron=1');
       loaded = true;
     }
-  }, 2000);
+  }, 5000);
   
   mainWindow.loadUrl('data:text/html,Connecting...');
   
