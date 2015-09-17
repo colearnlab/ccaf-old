@@ -32,7 +32,7 @@
     });
     
     Event.on('data-get', function(conn, message) {
-      conn.sendObj('data-get-returned', {'data': getByPath(state, message.path), 'id': message.id});
+      conn.sendObj('data-get-returned', {'patch': jsondiffpatch.diff({}, state), 'id': message.id});
     });
 
     Event.on('data-attempt-state', function(conn, message) {

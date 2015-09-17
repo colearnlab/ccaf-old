@@ -9,6 +9,7 @@ define(['clientUtil'], function(clientUtil) {
     if (arguments.length === 0) {
       obj.X = {};
       obj.Y = {};
+      obj.timestamp = {};
       obj.pen = pen;
       obj.strokeFinished = false;
       obj.id = Math.floor((1 + Math.random()) * 0x10000000).toString(16);
@@ -35,6 +36,7 @@ define(['clientUtil'], function(clientUtil) {
     
     path.X[loc] = x;
     path.Y[loc] = y;
+    path.timestamp[loc] = Date.now();
     
     drawPath(path);
   }
@@ -44,8 +46,8 @@ define(['clientUtil'], function(clientUtil) {
     ctx.lineJoin = "round";
     ctx.lineWidth = path.pen.lineWidth;
     
-    var startX, startY;
-    for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
+    var startX, startY, i;
+    for (i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
       startX = path.X[i-1] || path.X[i]-1;
       startY = path.Y[i-1] || path.Y[i];
       ctx.beginPath();
@@ -56,8 +58,7 @@ define(['clientUtil'], function(clientUtil) {
       ctx.closePath();
       ctx.stroke();
     }
-    
-    path.lastPoint = path.X.length;
+    path.lastPoint =  i - 1;
   }
 
 
@@ -91,7 +92,8 @@ define(['clientUtil'], function(clientUtil) {
         drawnByMe[touchToPath[ct.identifier].id] = true;
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+          var ds = root.deviceState[params.device];
+          ds.paths[ds.version][touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
         });
       });
     };
@@ -100,11 +102,14 @@ define(['clientUtil'], function(clientUtil) {
       [].forEach.call(e.changedTouches, function(ct) {
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
         appRoot.try(function(root) {
-          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
-          for (var i = 0; i < Object.keys(touchToPath[ct.identifier].X).length; i++) {
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
+          var ds = root.deviceState[params.device];
+          if (typeof ds.paths[ds.version][touchToPath[ct.identifier].id] === 'undefined')
+            ds.paths[ds.version][touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+            
+          for (var i = Object.keys(ds.paths[ds.version][touchToPath[ct.identifier].id].X).length; i < Object.keys(touchToPath[ct.identifier].X).length; i++) {
+            ds.paths[ds.version][touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
+            ds.paths[ds.version][touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
+            ds.paths[ds.version][touchToPath[ct.identifier].id].timestamp[i] = touchToPath[ct.identifier].timestamp[i];
           }
         }).done();
       });
@@ -113,9 +118,11 @@ define(['clientUtil'], function(clientUtil) {
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         appRoot.try(function(root) {
-          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
-            return;
-          root.deviceState[params.device].paths[touchToPath[ct.identifier].id].strokeFinished = true;
+          var ds = root.deviceState[params.device];
+          if (typeof ds.paths[ds.version][touchToPath[ct.identifier].id] === 'undefined')
+            ds.paths[ds.version][touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+
+          ds.paths[ds.version][touchToPath[ct.identifier].id].strokeFinished = true;
         });
       });
     };
@@ -125,6 +132,8 @@ define(['clientUtil'], function(clientUtil) {
         root.deviceState = {};
       if (typeof root.deviceState[params.device] === 'undefined')
         root.deviceState[params.device] = {'paths': {}, 'version': 0}
+      if (typeof root.deviceState[params.device].paths[root.deviceState[params.device].version] === 'undefined')
+        root.deviceState[params.device].paths[root.deviceState[params.device].version] = {};
     })
     .then(function() {
       appRoot.get('deviceState.' + params.device, update);
@@ -137,6 +146,7 @@ define(['clientUtil'], function(clientUtil) {
   function update(root) {
     if (root.version !== version) {
       console.log('screen cleared');
+      paths = {};
       clearScreen();
       version = root.version;
       drawnByMe = {};
@@ -145,10 +155,17 @@ define(['clientUtil'], function(clientUtil) {
       });
     }
     
-    for (var prop in root.paths) {
+    for (var prop in root.paths[root.version]) {
       if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true))
         continue;
-      paths[prop] = PathFactory(root.paths[prop]);
+      else if (prop in paths) {
+        paths[prop].X = root.paths[root.version][prop].X;
+        paths[prop].Y = root.paths[root.version][prop].Y;
+        paths[prop].timestamp = root.paths[root.version][prop].timestamp;
+      }
+      else
+        paths[prop] = PathFactory(root.paths[root.version][prop]);
+      
       drawPath(paths[prop]);
     }
   }
@@ -173,13 +190,11 @@ define(['clientUtil'], function(clientUtil) {
             'onclick': function() {
               document.body.classList.add('frozen');
               appRoot.try(function(root) {
-                root.deviceState[params.device].paths = {};
-                root.deviceState[params.device].version++;
-              }).then(function(state) {
+                root.deviceState[params.device].paths[++root.deviceState[params.device].version] = {};
+              }).then(function(root) {
                 document.body.classList.remove('frozen');
-                paths = {};
-                clearScreen();
-              });
+                update(root.deviceState[params.device]);
+              }).done();
             }
           }, ['Clear']),
           m('span.spacer1', [m.trust('&nbsp;')]),

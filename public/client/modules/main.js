@@ -65,6 +65,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
       modal.display('Connected to:<br>' + classrooms[classroom].name + '<br>' + classrooms[classroom].devices[device].name);
     });
     cb.get('classrooms.' + classroom + '.devices.' + device + '.app', function(data) {
+      console.log(data);
       appChange(data);
       cb.subscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange);
     });
@@ -99,7 +100,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
         if (typeof state.classrooms[classroom].appRoot[appData.path] === 'undefined')
           state.classrooms[classroom].appRoot[appData.path] = {};
       }).then(function() {
-        cb.sync(100);
+        cb.sync(300);
         app.startApp(new clientUtil.CheckerboardStem(cb, 'classrooms.' + classroom + '.appRoot.' + appData.path), document.getElementById('app'),
           {'classroom': classroom, 'device': device});
       }).done();

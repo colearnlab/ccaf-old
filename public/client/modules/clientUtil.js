@@ -1,4 +1,4 @@
-define('clientUtil', [], function() {
+define('clientUtil', ['q'], function(Q) {
   var exports = {};
   
   exports.css = function(url, persist) {
@@ -52,9 +52,14 @@ define('clientUtil', [], function() {
   
   CheckerboardStem.prototype.try = function(callback) {
     var path = this.path;
-    return this.root.try(function(state) {
+    var deferred = Q.defer();
+    this.root.try(function(state) {
       callback(getByPath(state, path));
+    }).then(function(state) {
+      deferred.resolve(getByPath(state, path));
     });
+    
+    return deferred.promise;
   };
   
   CheckerboardStem.prototype.get = function(path, callback) {

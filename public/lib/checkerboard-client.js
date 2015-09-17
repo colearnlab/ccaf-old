@@ -19,7 +19,8 @@
 
     var actionHandler = {
       'data-get-returned': function(message) {
-        gets[message.id](message.data);
+        jsondiffpatch.patch(state, message.patch);
+        gets[message.id][1](getByPath(state, gets[message.id][0]));
       },
       'data-attempts-returned': function(message) {
         var i;
@@ -62,7 +63,7 @@
     var subs = {}, gets = [];
     
     this.get = function(path, callback) {
-      gets[++getIdentifier] = callback;
+      gets[++getIdentifier] = [path, callback];
       this.send('data-get', {'path': path, 'id': getIdentifier});
     };
     
