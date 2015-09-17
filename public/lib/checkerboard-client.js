@@ -26,7 +26,7 @@
         for (i = 0; i < attempts.length; i++) {
           if (!(attempts[i].id <= message.lastAttempt))
             break;
-          attempts[i].deferred.resolve(state.proxy);
+          attempts[i].deferred.resolve(state);
         }
         for (var j = attempts.length - 1; j >= i; j--)
           jsondiffpatch.unpatch(state, attempts[j].patch);
@@ -86,6 +86,7 @@
 
     var intervalHandle = null;
     var waitingForReturn = false;
+
     var sync = this.sync = function(interval) {
       if (interval === null) {
         clearInterval(intervalHandle);

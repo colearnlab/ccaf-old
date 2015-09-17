@@ -7,9 +7,8 @@ define(['clientUtil'], function(clientUtil) {
   function PathFactory(props) {
     var obj = {};
     if (arguments.length === 0) {
-      obj.X = [];
-      obj.Y = [];
-      obj.source = [];
+      obj.X = {};
+      obj.Y = {};
       obj.pen = pen;
       obj.strokeFinished = false;
       obj.id = Math.floor((1 + Math.random()) * 0x10000000).toString(16);
@@ -28,13 +27,14 @@ define(['clientUtil'], function(clientUtil) {
     }
   }
   
- addToPath = function(path, x, y, source) {
+ addToPath = function(path, x, y) {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
       return;
     
-    path.X.push(x);
-    path.Y.push(y);
-    path.source.push(source);
+    var loc = Object.keys(path.X).length;
+    
+    path.X[loc] = x;
+    path.Y[loc] = y;
     
     drawPath(path);
   }
@@ -45,7 +45,7 @@ define(['clientUtil'], function(clientUtil) {
     ctx.lineWidth = path.pen.lineWidth;
     
     var startX, startY;
-    for (var i = (path.lastPoint || 0); i < path.X.length; i++) {
+    for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
       startX = path.X[i-1] || path.X[i]-1;
       startY = path.Y[i-1] || path.Y[i];
       ctx.beginPath();
@@ -73,7 +73,7 @@ define(['clientUtil'], function(clientUtil) {
     canvas.height = window.innerHeight;
     ctx = canvas.getContext('2d');
 
-    touchToPath = [];
+    touchToPath = {};
     paths = {};
     pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
     clearScreen();
@@ -100,21 +100,22 @@ define(['clientUtil'], function(clientUtil) {
       [].forEach.call(e.changedTouches, function(ct) {
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
         appRoot.try(function(root) {
-          var X = root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X;
-          var Y = root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y;
-          console.log(touchToPath[ct.identifier].X.length - X.length);
-          X[X.length] = touchToPath[ct.identifier].X[touchToPath[ct.identifier].X.length - 1];
-          Y[Y.length] = touchToPath[ct.identifier].Y[touchToPath[ct.identifier].Y.length - 1];
+          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
+            root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+          for (var i = 0; i < Object.keys(touchToPath[ct.identifier].X).length; i++) {
+            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
+            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
+          }
         }).done();
       });
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        var p = touchToPath[ct.identifier];
-        p.strokeFinished = true;
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[p.id].strokeFinished = true;
+          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
+            return;
+          root.deviceState[params.device].paths[touchToPath[ct.identifier].id].strokeFinished = true;
         });
       });
     };
@@ -135,15 +136,18 @@ define(['clientUtil'], function(clientUtil) {
   var drawnByMe = {};
   function update(root) {
     if (root.version !== version) {
+      console.log('screen cleared');
       clearScreen();
       version = root.version;
+      drawnByMe = {};
+      Object.keys(touchToPath).forEach(function(id) {
+        drawnByMe[touchToPath[id].id] = true;
+      });
     }
     
     for (var prop in root.paths) {
-      if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true)) {
-        console.log('skipped ', prop);
+      if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true))
         continue;
-      }
       paths[prop] = PathFactory(root.paths[prop]);
       drawPath(paths[prop]);
     }

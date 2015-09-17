@@ -99,7 +99,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
         if (typeof state.classrooms[classroom].appRoot[appData.path] === 'undefined')
           state.classrooms[classroom].appRoot[appData.path] = {};
       }).then(function() {
-        cb.sync(250);
+        cb.sync(100);
         app.startApp(new clientUtil.CheckerboardStem(cb, 'classrooms.' + classroom + '.appRoot.' + appData.path), document.getElementById('app'),
           {'classroom': classroom, 'device': device});
       }).done();
