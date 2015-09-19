@@ -1,1 +1,0 @@
-{"classrooms":{"3":{"name":"test classroom","devices":{"75":{"app":{"path":"whiteboard","client":"client.js"},"name":"Light green table","color":"lightgreen","location":{"x":-0.9248212041114579,"y":21.78272948628203,"angle":"0"},"screen":{"height":"7.90283203125","width":"12.9207356770833"},"connected":false,"frozen":false}},"appRoot":{}}}}

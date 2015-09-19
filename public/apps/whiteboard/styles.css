@@ -1,5 +1,5 @@
 html, body {
-  background-color: #222222;
+  background-color: #ffffff;
   overflow: hidden;
   height: 100%;
   padding: 0pt;
@@ -13,6 +13,13 @@ canvas {
   position: absolute;
   width: 100%;
   height: 100%;
+}
+
+.map {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-image: url(https://upload.wikimedia.org/wikipedia/commons/c/ca/Blank_US_map_borders.svg);
 }
 
 #controls {
