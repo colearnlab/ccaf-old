@@ -126,16 +126,15 @@ define(['clientUtil'], function(clientUtil) {
       if (typeof root.deviceState[params.device] === 'undefined')
         root.deviceState[params.device] = {'paths': {}, 'version': 0}
       root.deviceState[params.device].device = params.device;
-    })
-    .then(function() {
-      appRoot.get('deviceState.' + params.device, update);
-      appRoot.subscribe('deviceState.' + params.device, update);
-    }).done();
+    }, function() {
+      appRoot.subscribe(update, update);
+    });
   };
 
   var version;
   var drawnByMe = {};
   function update(root) {
+    console.log(root = root.deviceState[params.device]);
     if (root.device !== params.device)
       return;
     if (root.version !== version) {

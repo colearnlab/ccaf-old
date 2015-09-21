@@ -1,4 +1,4 @@
-define('clientUtil', ['q'], function(Q) {
+define('clientUtil', function() {
   var exports = {};
   
   exports.css = function(url, persist) {
@@ -43,35 +43,6 @@ define('clientUtil', ['q'], function(Q) {
       }
    
       return obj;
-  };
-  
-  var CheckerboardStem = exports.CheckerboardStem = function(root,  path) {
-    this.root = root;
-    this.path = path;
-  }
-  
-  CheckerboardStem.prototype.try = function(callback) {
-    var path = this.path;
-    var deferred = Q.defer();
-    this.root.try(function(state) {
-      callback(getByPath(state, path));
-    }).then(function(state) {
-      deferred.resolve(getByPath(state, path));
-    });
-    
-    return deferred.promise;
-  };
-  
-  CheckerboardStem.prototype.get = function(path, callback) {
-    return this.root.get(this.path + '.' + path, callback);
-  };
-  
-  CheckerboardStem.prototype.subscribe = function(path, callback) {
-    return this.root.subscribe(this.path + '.' + path, callback); 
-  };
-  
-  CheckerboardStem.prototype.unsubscribe = function(path, callback) {
-    return this.root.unsubscribe(this.path + '.' + path, callback);
   };
   
   return exports;

@@ -30,6 +30,7 @@ operations | params
     this.getCallbacks = {};
     this.subCallbacks = {};
     this.attempts = [];
+    this.toSync.push(this);
     var that = this;
     this.ws.addEventListener('message', function(event) {
       var envelope = JSON.parse(event.data);
@@ -47,6 +48,7 @@ operations | params
             index = mappedIds.indexOf(envelope.message.successes[i]);
             if (index > -1) {
               waitFlag = true;
+              that.attempts[index].then();
               that.attempts.splice(index, 1);
             }
           }
@@ -62,7 +64,7 @@ operations | params
     });
   };
 
-  STM.prototype.transactionId = 0;
+  var transactionId = 0;
 
   STM.prototype.send = function(channel, message) {
     this.ws.send(JSON.stringify({'channel': channel, 'message': message}));
@@ -74,8 +76,8 @@ operations | params
       path = undefined;
     }
     
-    this.getCallbacks[++this.transactionId] = callback;
-    this.send('get', {'path': (this.basePath || '') + (typeof this.basePath === typeof path ? '.' : '') + (path || ''), 'id': this.transactionId});
+    this.getCallbacks[++transactionId] = callback;
+    this.send('get', {'path': (this.basePath || '') + (typeof this.basePath === typeof path ? '.' : '') + (path || ''), 'id': transactionId});
   };
 
   STM.prototype.subscribe = function(path, callback, init) {
@@ -89,9 +91,8 @@ operations | params
     if (typeof init === 'undefined')
       init = noop;
     var toReturn = new STM(this.ws, (this.basePath || '') + (typeof this.basePath === typeof path ? '.' : '') + (path || ''));
-    this.toSync.push(toReturn);
-    toReturn.subCallbacks[++this.transactionId] = callback;
-    this.send('subscribe', {'path': toReturn.basePath, 'id': this.transactionId});
+    toReturn.subCallbacks[++transactionId] = callback;
+    this.send('subscribe', {'path': toReturn.basePath, 'id': transactionId});
     toReturn.get(function(data) {
       toReturn.state = data;
       init(toReturn.state);
@@ -99,14 +100,21 @@ operations | params
     
     return toReturn;
   };
+  
+  STM.prototype.unsubscribe = function() {
+    this.send('unsusbcribe', {'id': Object.keys(this.subCallbacks)[0]});
+  };
 
-  STM.prototype.attempt = function(callback) {
-    this.attempts.push(new Attempt(callback));
+  STM.prototype.try = function(callback, then) {
+    if (typeof then === 'undefined')
+      then = noop;
+    this.attempts.push(new Attempt(callback, then));
     this.sync();
   };
   
-  function Attempt(callback, id) {
+  function Attempt(callback, then) {
     this.callback = callback;
+    this.then = then;
   };
   
   Attempt.prototype.toJSON = function() {
@@ -114,41 +122,50 @@ operations | params
   };
   
   STM.prototype.toSync = [];
-  STM.prototype.syncInterval = null;
+  var syncInterval = null;
+  var syncing = false;
   STM.prototype.sync = function(interval) {
     var that = this;
     var op = function() {
+      if (syncing)
+        return;
+        
+      syncing = true;
       that.toSync.forEach(function(toSync) {
         if (toSync.attempts.length === 0 || toSync.waitingForReturn)
           return;
           
         var originState = JSON.parse(JSON.stringify(that.state));
         var comparandState = JSON.parse(JSON.stringify(that.state));
-        toSync.attempts = toSync.attempts.filter(function(attempt) {
-          attempt.callback(comparandState);
-          attempt.delta = diff(originState, comparandState);
-          if (attempt.delta !== 'undefined') {
-            patch(originState, attempt.delta);
-            attempt.id = ++that.transactionId;
-            return true;
+        var tmp = [];
+        for (var i = 0; i < toSync.attempts.length; i++) {
+          toSync.attempts[i].callback(comparandState);
+          toSync.attempts[i].delta = diff(originState, comparandState);
+          if (typeof toSync.attempts[i].delta !== 'undefined') {
+            patch(originState, toSync.attempts[i].delta);
+            toSync.attempts[i].id = ++transactionId;
+            tmp.push(toSync.attempts[i]);
+          } else {
+            toSync.attempts[i].then();
           }
-          return false;
-        });
-        
+        }
+        toSync.attempts = tmp;
+        console.log(toSync.attempts);
         if (toSync.attempts.length > 0) {
           toSync.waitingForReturn = true;
           toSync.send('attempt', {path: toSync.basePath, attempts: toSync.attempts});
         };
       });
+      syncing = false;
     };
     
-    if (typeof interval === undefined && this.syncInterval === null)
+    if (typeof interval === 'undefined' && syncInterval === null)
       op();
-    else if (typeof interval === null && this.syncInterval !== null)
-      clearInterval(this.syncInterval);
-    else if (typeof interval !== undefined) {
-      if (this.syncInterval !== null)
-        clearInterval(this.syncInterval);
+    else if (typeof interval === null && syncInterval !== null)
+      clearInterval(syncInterval);
+    else if (typeof interval !== 'undefined') {
+      if (syncInterval !== null)
+        clearInterval(syncInterval);
       
       setInterval(op, interval);
     }

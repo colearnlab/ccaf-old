@@ -17,6 +17,10 @@ module.exports.Server = function(port, inputState, opts) {
     conn.subs[message.id] = message.path;
   });
   
+  this.on('unsubscribe', function(conn, message) {
+    delete conn.subs[message.id];
+  });
+  
   var that = this;
   this.on('attempt', function(conn, message) {
     var successes = [];

@@ -2,9 +2,7 @@ requirejs.config({
   'paths': {
     'interact': '/lib/interact-1.2.5',
     'mithril': '/lib/mithril',
-    'q': '/lib/q.min',
-    'checkerboard': '/lib/checkerboard-client',
-    'jsondiffpatch': '/lib/jsondiffpatch',
+    'checkerboard': '/lib/diffpatch',
     'cookies': '/lib/cookies',
     'modal': '/client/modules/modal'
   }
@@ -27,7 +25,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
   });
   
   ws.onopen = function() {
-    exports.cb = cb = new checkerboard(ws);
+    exports.cb = root = new checkerboard.STM(ws);
     if (cookies.hasItem('classroom') && cookies.hasItem('device'))
       setIdentity(cookies.getItem('classroom'), cookies.getItem('device'));
     
@@ -45,11 +43,11 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     ws.onerror = rec;
   };
     
-  var selected = false, classroom, device;
+  var selected = false, classroom, device, classrooms;
   var resetIdentity = exports.resetIdentity = function() {
     clearApp();
     selected = false;
-    cb.unsubscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange);
+    app.unsubscribe();
     cookies.removeItem('classroom');
     cookies.removeItem('device');
     classroom = undefined;
@@ -61,14 +59,11 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     device = _device;
     cookies.setItem('classroom', classroom);
     cookies.setItem('device', device);
-    cb.get('classrooms', function(classrooms) {
+    classrooms = root.subscribe('classrooms', undefined, function(classrooms) {
       modal.display('Connected to:<br>' + classrooms[classroom].name + '<br>' + classrooms[classroom].devices[device].name);
     });
-    cb.get('classrooms.' + classroom + '.devices.' + device + '.app', function(data) {
-      console.log(data);
-      appChange(data);
-      cb.subscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange);
-    });
+    
+    app = root.subscribe('classrooms.' + classroom + '.devices.' + device + '.app', appChange, appChange);
   }
   
   var clearApp = function() {
@@ -83,27 +78,30 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
 
     m.mount(document.getElementById('navs'), main);
   
-    appData = {};
+    appData = undefined;
   };
   
-  var appData, appElement;
+  var appData, appElement, appRoot
   var appChange = function(_appData) {
     if (typeof appData !== 'undefined' && _appData.path === appData.path)
       return;
       
     appData = _appData;
     requirejs(['/apps/' + appData.path + '/' + appData.client], function(app) {
-
-      cb.try(function(state) {
-        if (typeof state.classrooms[classroom].appRoot === 'undefined')
-          state.classrooms[classroom].appRoot = {};
-        if (typeof state.classrooms[classroom].appRoot[appData.path] === 'undefined')
-          state.classrooms[classroom].appRoot[appData.path] = {};
-      }).then(function() {
-        cb.sync(300);
-        app.startApp(new clientUtil.CheckerboardStem(cb, 'classrooms.' + classroom + '.appRoot.' + appData.path), document.getElementById('app'),
-          {'classroom': classroom, 'device': device});
-      }).done();
+      classrooms.try(function(classrooms) {
+        console.log(classrooms);
+          if (typeof classrooms[classroom].appRoot === 'undefined')
+            classrooms[classroom].appRoot = {};
+          if (typeof classrooms[classroom].appRoot[appData.path] === 'undefined')
+            classrooms[classroom].appRoot[appData.path] = {};
+        },
+        function() {
+          root.sync(300);
+          appRoot = classrooms.subscribe(classroom + '.appRoot.' + appData.path, undefined, function() {
+            app.startApp(appRoot, document.getElementById('app'),
+              {'classroom': classroom, 'device': device});
+          });
+        });
     });
   };
   
