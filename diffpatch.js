@@ -22,6 +22,82 @@ operations | params
 
 var sharedThreshold = 0.5;
 
+function STM(ws, basePath) {
+  this.ws = ws;
+  this.basePath = basePath;
+  this.state = {};
+  this.getCallbacks = {};
+  this.subCallbacks = {};
+  this.attempts = {};
+  var that = this;
+  this.ws.addEventListener('message', function(event) {
+    var envelope = JSON.parse(event.data);
+    switch(envelope.channel) {
+      case 'get-returned':
+        if (envelope.message.id in that.getCallbacks) {
+          that.getCallbacks[envelope.message.id](envelope.message.data);
+          delete that.getCallbacks[envelope.message.id];
+        }
+        break;
+      case 'attempt-returned':
+        for (var i = 0; i < envelope.message.successes.length; i++)
+          if (envelope.message.successes[i] in that.attempts)
+            delete that.attempts[envelope.message.successes[i]];
+        break;
+      case 'update-state':
+        if (envelope.message.id in that.subCallbacks) {
+          patch(that.state, envelope.message.delta);
+          that.subCallbacks[envelope.message.id](that.state);
+        }
+        break;
+    }
+  });
+};
+
+STM.prototype.transactionId = 0;
+
+STM.prototype.send = function(channel, message) {
+  this.ws.send(JSON.stringify({'channel': channel, 'message': message}));
+};
+
+STM.prototype.get = function(path, callback) {
+  if (typeof path === 'function') {
+    callback = path;
+    path = undefined;
+  }
+  
+  this.getCallbacks[++this.transactionId] = callback;
+  this.send('get', {'path': (this.basePath || '') + (typeof this.basePath === typeof path ? '.' : '') + (path || ''), 'id': this.transactionId});
+};
+
+STM.prototype.subscribe = function(path, callback, init) {
+  if (typeof path === 'function') {
+    callback = path;
+    init = callback;
+    path = undefined;
+  }
+  var toReturn = new STM(this.ws, (this.basePath || '') + (typeof this.basePath === typeof path ? '.' : '') + (path || ''));
+  toReturn.subCallbacks[++this.transactionId] = callback;
+  this.send('subscribe', {'path': toReturn.basePath, 'id': this.transactionId});
+  toReturn.get(function(data) {
+    toReturn.state = data;
+    if (typeof init !== 'undefined')
+      init(toReturn.state);
+  });
+  
+  return toReturn;
+};
+
+STM.prototype.attempt = function(callback) {
+  var savedState = JSON.parse(JSON.stringify(this.state));
+  callback(savedState);
+  var delta = diff(this.state, savedState);
+  if (typeof delta !== 'undefined') {
+    this.attempts[++this.transactionId] = {id: this.transactionId, delta: delta};
+    this.send('attempt', {path: this.basePath, attempts: [this.attempts[this.transactionId]]});
+  }
+};
+
 // assert(isPOJS(origin) && isPOJS(comparand))
 function diff(origin, comparand) {
   if (!isPOJS(origin) || !isPOJS(comparand))
@@ -61,9 +137,8 @@ function diff(origin, comparand) {
       delta[props[i]] = {_op: 'du'};
     else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && origin[props[i]] !== comparand[props[i]]))
       delta[props[i]] = {_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
-    else if (typeof (subDelta = diff(origin[props[i]], comparand[props[i]])) !== 'undefined')
+    else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]])) !== 'undefined')
       delta[props[i]] = subDelta;
-      
   }
 
   if (Object.keys(delta).length > 0)
@@ -84,9 +159,38 @@ function patch(target, delta, checked) {
       case 'su': target[prop] = undefined;        break;
       case 'mu': target[prop] = delta[prop].nmu;  break;
       case 'd':
-      case 'du': delete target[prop];             break;
+      case 'du':
+        if (target instanceof Array)
+          target.splice(prop, 1)
+        else
+          delete target[prop];                    break;
     }
   });
+  
+  return true;
+}
+
+function reverse(delta) {
+  var toReturn = {};
+  Object.keys(delta).forEach(function(prop) {
+    if (!('_op' in delta[prop]))
+      toReturn[prop] = reverse(delta[prop]);
+    
+    switch(delta[prop]._op) {
+      case 's':  toReturn[prop] = {_op: 'd',   od:   delta[prop].ns};                      break;
+      case 'm':  toReturn[prop] = {_op: 'm',   om:   delta[prop].nm, nm: delta[prop].om};  break;
+      case 'd':  toReturn[prop] = {_op: 's',   ns:   delta[prop].od};                      break;
+      case 'su':
+        if (typeof delta[prop].osu !== 'undefined')
+          toReturn[prop] =        {_op: 'mu',  nmu: delta[prop].osu};
+        else
+          toReturn[prop] =        {_op: 'du'};                                             break;
+      case 'mu': toReturn[prop] = {_op: 'su',  osu: delta[prop].nmu};                      break;
+      case 'du': toReturn[prop] = {_op: 'su'};                                             break;
+    } 
+  });
+  
+  return toReturn;
 }
 
 function check(target, delta) {
