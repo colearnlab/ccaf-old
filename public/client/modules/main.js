@@ -89,7 +89,6 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     appData = _appData;
     requirejs(['/apps/' + appData.path + '/' + appData.client], function(app) {
       classrooms.try(function(classrooms) {
-        console.log(classrooms);
           if (typeof classrooms[classroom].appRoot === 'undefined')
             classrooms[classroom].appRoot = {};
           if (typeof classrooms[classroom].appRoot[appData.path] === 'undefined')

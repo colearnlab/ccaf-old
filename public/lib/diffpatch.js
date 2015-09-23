@@ -30,6 +30,7 @@ operations | params
     this.getCallbacks = {};
     this.subCallbacks = {};
     this.attempts = [];
+    this.attemptLock = false;
     this.toSync.push(this);
     var that = this;
     this.ws.addEventListener('message', function(event) {
@@ -42,17 +43,17 @@ operations | params
           }
           break;
         case 'attempt-returned':
-          var mappedIds = that.attempts.map(function(attempt) { return attempt.id; });
-          var waitFlag = false;
-          for (var i = 0, index; i < envelope.message.successes.length; i++) {
-            index = mappedIds.indexOf(envelope.message.successes[i]);
-            if (index > -1) {
-              waitFlag = true;
-              that.attempts[index].then();
-              that.attempts.splice(index, 1);
+          if (envelope.message.id !== that.transactionId)
+            return;
+          that.attempts = that.attempts.filter(function(attempt) {
+            if (envelope.message.successes.indexOf(attempt.id) >= 0) {
+              attempt.then();
+              return false;
+            } else {
+              return true;
             }
-          }
-          if (waitFlag) that.waitingForReturn = false;
+          });
+          that.waitingForReturn = false;
           break;
         case 'update-state':
           if (envelope.message.id in that.subCallbacks) {
@@ -135,14 +136,13 @@ operations | params
         if (toSync.attempts.length === 0 || toSync.waitingForReturn)
           return;
           
-        var originState = JSON.parse(JSON.stringify(that.state));
-        var comparandState = JSON.parse(JSON.stringify(that.state));
+        var savedState = JSON.parse(JSON.stringify(toSync.state));
         var tmp = [];
         for (var i = 0; i < toSync.attempts.length; i++) {
-          toSync.attempts[i].callback(comparandState);
-          toSync.attempts[i].delta = diff(originState, comparandState);
+          toSync.attempts[i].callback(toSync.state);
+          toSync.attempts[i].delta = diff(savedState, toSync.state);
           if (typeof toSync.attempts[i].delta !== 'undefined') {
-            patch(originState, toSync.attempts[i].delta);
+            patch(savedState, toSync.attempts[i].delta);
             toSync.attempts[i].id = ++transactionId;
             tmp.push(toSync.attempts[i]);
           } else {
@@ -150,10 +150,10 @@ operations | params
           }
         }
         toSync.attempts = tmp;
-        console.log(toSync.attempts);
         if (toSync.attempts.length > 0) {
           toSync.waitingForReturn = true;
-          toSync.send('attempt', {path: toSync.basePath, attempts: toSync.attempts});
+          toSync.send('attempt', {id: ++transactionId, path: toSync.basePath, attempts: toSync.attempts});
+          toSync.transactionId = transactionId;
         };
       });
       syncing = false;
@@ -161,13 +161,16 @@ operations | params
     
     if (typeof interval === 'undefined' && syncInterval === null)
       op();
-    else if (typeof interval === null && syncInterval !== null)
-      clearInterval(syncInterval);
+    else if (typeof interval === null && syncInterval !== null) {
+          clearInterval(syncInterval);
+      syncInterval = null;
+    }
     else if (typeof interval !== 'undefined') {
       if (syncInterval !== null)
         clearInterval(syncInterval);
       
-      setInterval(op, interval);
+      console.log('set');
+      syncInterval = setInterval(op, interval);
     }
   }
 

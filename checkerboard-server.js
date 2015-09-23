@@ -32,23 +32,13 @@ module.exports.Server = function(port, inputState, opts) {
       }
       return false;
     });
-    conn.sendObj('attempt-returned', {'successes': successes});
+    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes});
     var delta = diff(savedState, that.state);
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
-        var components = otherConn.subs[id].split('.');
-        var cur = delta;
-        while (components.length > 0 && typeof cur !== 'undefined') {
-          cur = cur[components[0]];
-          components = components.splice(1);
-          if ('_op' in cur) {
-            otherConn.sendObj('update-state', {'id': id, 'delta': getByPath(delta, otherConn.subs[id])});
-            break;
-          }
-        }
-        if (typeof cur !== 'undefined') {
-          otherConn.sendObj('update-state', {'id': id, 'delta': getByPath(delta, otherConn.subs[id])});
-        }
+        var delta = diff(getByPath(savedState, otherConn.subs[id]), getByPath(that.state, otherConn.subs[id]));
+        if (typeof delta !== 'undefined')
+          otherConn.sendObj('update-state', {'id': id, 'delta': delta});
       });
     });
   });

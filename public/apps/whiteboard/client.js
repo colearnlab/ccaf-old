@@ -45,6 +45,7 @@ define(['clientUtil'], function(clientUtil) {
     ctx.lineWidth = path.pen.lineWidth;
     
     var startX, startY;
+    console.log('drawing ' + path.id + ' from ' + path.lastPoint);
     for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
       startX = path.X[i-1] || path.X[i]-1;
       startY = path.Y[i-1] || path.Y[i];
@@ -57,7 +58,7 @@ define(['clientUtil'], function(clientUtil) {
       ctx.stroke();
     }
     
-    path.lastPoint = path.X.length;
+    path.lastPoint = Object.keys(path.X).length;
   }
 
 
@@ -100,21 +101,19 @@ define(['clientUtil'], function(clientUtil) {
       [].forEach.call(e.changedTouches, function(ct) {
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
         appRoot.try(function(root) {
-          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
           for (var i = 0; i < Object.keys(touchToPath[ct.identifier].X).length; i++) {
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
+            try {
+              root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
+              root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
+            } catch(e) { debugger; }
           }
-        }).done();
+        });
       });
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         appRoot.try(function(root) {
-          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
-            return;
           root.deviceState[params.device].paths[touchToPath[ct.identifier].id].strokeFinished = true;
         });
       });
@@ -134,9 +133,7 @@ define(['clientUtil'], function(clientUtil) {
   var version;
   var drawnByMe = {};
   function update(root) {
-    console.log(root = root.deviceState[params.device]);
-    if (root.device !== params.device)
-      return;
+    root = root.deviceState[params.device];
     if (root.version !== version) {
       console.log('screen cleared');
       clearScreen();
@@ -146,11 +143,15 @@ define(['clientUtil'], function(clientUtil) {
         drawnByMe[touchToPath[id].id] = true;
       });
     }
-    
     for (var prop in root.paths) {
       if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true))
         continue;
-      paths[prop] = PathFactory(root.paths[prop]);
+      if (prop in paths && !paths[prop].strokeFinished) {
+        paths[prop].X = root.paths[prop].X;
+        paths[prop].Y = root.paths[prop].Y;
+      } else if (!(prop in paths)) {
+        paths[prop] = PathFactory(root.paths[prop]);
+      }
       drawPath(paths[prop]);
     }
   }
@@ -177,7 +178,7 @@ define(['clientUtil'], function(clientUtil) {
               appRoot.try(function(root) {
                 root.deviceState[params.device].paths = {};
                 root.deviceState[params.device].version++;
-              }).then(function(state) {
+              }, function(state) {
                 document.body.classList.remove('frozen');
                 paths = {};
                 clearScreen();
