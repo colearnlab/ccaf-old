@@ -45,7 +45,6 @@ define(['clientUtil'], function(clientUtil) {
     ctx.lineWidth = path.pen.lineWidth;
     
     var startX, startY;
-    console.log('drawing ' + path.id + ' from ' + path.lastPoint);
     for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
       startX = path.X[i-1] || path.X[i]-1;
       startY = path.Y[i-1] || path.Y[i];
@@ -102,10 +101,10 @@ define(['clientUtil'], function(clientUtil) {
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
         appRoot.try(function(root) {
           for (var i = 0; i < Object.keys(touchToPath[ct.identifier].X).length; i++) {
-            try {
-              root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
-              root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
-            } catch(e) { debugger; }
+            if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
+               root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
+            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
           }
         });
       });
@@ -114,7 +113,9 @@ define(['clientUtil'], function(clientUtil) {
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[touchToPath[ct.identifier].id].strokeFinished = true;
+          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
+               root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].strokeFinished = true;
         });
       });
     };

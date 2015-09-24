@@ -49,7 +49,7 @@ var app = connect();
 app.use(function(req, res, next){ 
   res.setHeader('Last-Modified', (new Date()).toUTCString());
   next(); 
-}).use(connect.logger()).use('/', connect.static(__dirname + '/public/client')).use(connect.static(__dirname + '/public')).listen(config.ports.http);
+}).use('/', connect.static(__dirname + '/public/client')).use(connect.static(__dirname + '/public')).listen(config.ports.http);
 
 console.log('HTTP port: ' + config.ports.http);
 

@@ -30,7 +30,7 @@ operations | params
     this.getCallbacks = {};
     this.subCallbacks = {};
     this.attempts = [];
-    this.attemptLock = false;
+    this.transactionIds = [];
     this.toSync.push(this);
     var that = this;
     this.ws.addEventListener('message', function(event) {
@@ -43,7 +43,7 @@ operations | params
           }
           break;
         case 'attempt-returned':
-          if (envelope.message.id !== that.transactionId)
+          if (that.transactionIds.indexOf(envelope.message.id) < 0)
             return;
           that.attempts = that.attempts.filter(function(attempt) {
             if (envelope.message.successes.indexOf(attempt.id) >= 0) {
@@ -124,39 +124,57 @@ operations | params
   
   STM.prototype.toSync = [];
   var syncInterval = null;
-  var syncing = false;
   STM.prototype.sync = function(interval) {
     var that = this;
     var op = function() {
-      if (syncing)
-        return;
-        
-      syncing = true;
       that.toSync.forEach(function(toSync) {
-        if (toSync.attempts.length === 0 || toSync.waitingForReturn)
+        if (toSync.attempts.length === 0)
           return;
-          
+        else if (toSync.syncing || toSync.waitingForReturn)
+          return console.log('x');
+        
+        toSync.syncing = true;
         var savedState = JSON.parse(JSON.stringify(toSync.state));
         var tmp = [];
-        for (var i = 0; i < toSync.attempts.length; i++) {
-          toSync.attempts[i].callback(toSync.state);
-          toSync.attempts[i].delta = diff(savedState, toSync.state);
-          if (typeof toSync.attempts[i].delta !== 'undefined') {
-            patch(savedState, toSync.attempts[i].delta);
-            toSync.attempts[i].id = ++transactionId;
-            tmp.push(toSync.attempts[i]);
-          } else {
-            toSync.attempts[i].then();
+        var attempts = [];
+        for (var k = 0; k < toSync.attempts.length; k++)
+          attempts[k] = toSync.attempts[k];
+
+        var innerLoop = function(i) {
+          if (i >= attempts.length) {
+            toSync.attempts = tmp;
+            if (toSync.attempts.length > 0) {
+              toSync.waitingForReturn = true;
+              toSync.send('attempt', {id: ++transactionId, path: toSync.basePath, attempts: toSync.attempts});
+              toSync.transactionIds.push(transactionId);
+            }
+            toSync.syncing = false;
+            return;
           }
-        }
-        toSync.attempts = tmp;
-        if (toSync.attempts.length > 0) {
-          toSync.waitingForReturn = true;
-          toSync.send('attempt', {id: ++transactionId, path: toSync.basePath, attempts: toSync.attempts});
-          toSync.transactionId = transactionId;
+           
+          try {
+            attempts[i].callback(toSync.state);
+          } catch(e){
+            debugger;
+            return toSync.syncing = false;
+          }
+          var j = i;
+          diffA(savedState, toSync.state, function(result) {
+            if (typeof result === 'undefined')
+              attempts[j].then();
+            else {
+              attempts[j].delta = result;
+              attempts[j].id = ++transactionId;
+              patch(savedState, result);
+              tmp.push(attempts[j]);
+            }
+            
+            innerLoop(++j);
+          });
         };
+        
+        innerLoop(0);
       });
-      syncing = false;
     };
     
     if (typeof interval === 'undefined' && syncInterval === null)
@@ -172,6 +190,81 @@ operations | params
       console.log('set');
       syncInterval = setInterval(op, interval);
     }
+  }
+  
+  function diffADebug(origin, comparand, callback) {
+    callback(diff(origin, comparand));
+  };
+  
+  function diffA(origin, comparand, callback) {
+    if (!isPOJS(origin) || !isPOJS(comparand))
+      throw new Error('Attempting to diff a non-object');
+    var delta = {}, props = [];
+    
+    var originProps = Object.keys(origin), comparandProps = Object.keys(comparand), numSharedProps = 0;
+    [].push.apply(props, originProps);
+    [].push.apply(props, comparandProps);
+    props = props.filter(function(element, index, array) {
+      return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
+    }, {});
+    
+    if ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold))
+      callback({_op: 'm', om: origin, nm: comparand});
+      
+    var op = function(i) {
+      if (i >= props.length) {
+        if (Object.keys(delta).length > 0)
+          callback(delta);
+        else
+          callback();
+        return;
+      };
+      
+      var fPropInOrigin, fPropInComparand, fUndefinedInOrigin, fUndefinedInComparand, fTypesMatch, fObjInOrigin, fObjInComparand;
+      var subDelta;
+      
+      fPropInOrigin = props[i] in origin;
+      fPropInComparand = props[i] in comparand;
+      fUndefinedInOrigin = typeof origin[props[i]] === 'undefined';
+      fUndefinedInComparand = typeof comparand[props[i]] === 'undefined';
+      fTypesMatch = typeof comparand[props[i]] === typeof origin[props[i]];
+      fObjInOrigin = isPOJS(origin[props[i]]);
+      fObjInComparand = isPOJS(comparand[props[i]]);
+      
+      var res;
+      if (fPropInOrigin && fUndefinedInOrigin && !fUndefinedInComparand)
+        res = {_op: 'mu', nmu: comparand[props[i]]};
+      else if (fPropInComparand && (!fUndefinedInOrigin || !fPropInOrigin) && fUndefinedInComparand)
+        res = {_op: 'su', osu: origin[props[i]]};
+      else if (!fPropInOrigin && fPropInComparand )
+        res = {_op: 's', ns: comparand[props[i]]};
+      else if (fPropInOrigin && !fPropInComparand)
+        res = {_op: 'd', od: origin[props[i]]}
+      else if (fUndefinedInOrigin && !fPropInComparand)
+        res = {_op: 'du'};
+      else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && origin[props[i]] !== comparand[props[i]]))
+        res = {_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
+        
+      if (typeof res !== 'undefined') {
+        delta[props[i]] = res;
+        op(++i);
+      } else if (fObjInOrigin && fObjInComparand) {
+        var j = i;
+        setZeroTimeout(function() {
+          var k = j;
+          diffADebug(origin[props[j]], comparand[props[j]], function(result) {
+            if (typeof result !== 'undefined')
+              delta[props[k]] = result;
+          
+            op(++k);  
+          });
+        });
+      } else {
+        op(++i);
+      }
+    };
+    
+    op(0);
   }
 
   // assert(isPOJS(origin) && isPOJS(comparand))
@@ -190,8 +283,7 @@ operations | params
     if ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold))
       return {_op: 'm', om: origin, nm: comparand};
     
-    var fPropInOrigin, fPropInComparand, fUndefinedInOrigin, fUndefinedInComparand, fTypesMatch, fObjInOrigin, fObjInComparand;
-    var subDelta;
+
     for (var i = 0; i < props.length; i++) {
       fPropInOrigin = props[i] in origin;
       fPropInComparand = props[i] in comparand;
@@ -316,6 +408,37 @@ operations | params
     
     return true;
   }
+  
+  var setZeroTimeout;
+  (function() {
+    if (typeof window === 'undefined')
+      return;
+    var timeouts = [];
+    var messageName = "zero-timeout-message";
+
+    // Like setTimeout, but only takes a function argument.  There's
+    // no time argument (always zero) and no arguments (you have to
+    // use a closure).
+    function _setZeroTimeout(fn) {
+        timeouts.push(fn);
+        window.postMessage(messageName, "*");
+    }
+
+    function handleMessage(event) {
+        if (event.source == window && event.data == messageName) {
+            event.stopPropagation();
+            if (timeouts.length > 0) {
+                var fn = timeouts.shift();
+                fn();
+            }
+        }
+    }
+
+    window.addEventListener("message", handleMessage, true);
+
+    // Add the one thing we want added to the window object.
+    setZeroTimeout = _setZeroTimeout;
+  })();
 
   if (typeof define !== 'undefined')
     define({'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse});
