@@ -45,6 +45,7 @@ operations | params
         case 'attempt-returned':
           if (that.transactionIds.indexOf(envelope.message.id) < 0)
             return;
+          that.transactionIds.splice(that.transactionIds.indexOf(envelope.message.id), 1);
           that.attempts = that.attempts.filter(function(attempt) {
             if (envelope.message.successes.indexOf(attempt.id) >= 0) {
               attempt.then();
@@ -130,11 +131,12 @@ operations | params
       that.toSync.forEach(function(toSync) {
         if (toSync.attempts.length === 0)
           return;
-        else if (toSync.syncing || toSync.waitingForReturn)
+        else if (toSync.syncing || toSync.transactionIds.length > 0)
           return console.log('x');
         
         toSync.syncing = true;
-        var savedState = JSON.parse(JSON.stringify(toSync.state));
+        var origin = JSON.parse(JSON.stringify(toSync.state));
+        var comparand = JSON.parse(JSON.stringify(toSync.state));
         var tmp = [];
         var attempts = [];
         for (var k = 0; k < toSync.attempts.length; k++)
@@ -153,23 +155,23 @@ operations | params
           }
            
           try {
-            attempts[i].callback(toSync.state);
+            attempts[i].callback(comparand);
           } catch(e){
             debugger;
             return toSync.syncing = false;
           }
-          var j = i;
-          diffA(savedState, toSync.state, function(result) {
+          var a = attempts[i];
+          diffA(origin, comparand, function(result) {
             if (typeof result === 'undefined')
-              attempts[j].then();
+              a.then();
             else {
-              attempts[j].delta = result;
-              attempts[j].id = ++transactionId;
-              patch(savedState, result);
-              tmp.push(attempts[j]);
+              a.delta = result;
+              a.id = ++transactionId;
+              patch(origin, result);
+              tmp.push(a);
             }
             
-            innerLoop(++j);
+            innerLoop(++i);
           });
         };
         
@@ -314,6 +316,9 @@ operations | params
   }
 
   function patch(target, delta, checked) {
+    if (typeof delta === 'undefined')
+      return true;
+      
     if (typeof checked === 'undefined' && !check(target, delta))
       return false;
       
@@ -341,9 +346,10 @@ operations | params
   function reverse(delta) {
     var toReturn = {};
     Object.keys(delta).forEach(function(prop) {
-      if (!('_op' in delta[prop]))
+      try {
+      if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
         toReturn[prop] = reverse(delta[prop]);
-      
+      } catch (e){ debugger; }
       switch(delta[prop]._op) {
         case 's':  toReturn[prop] = {_op: 'd',   od:   delta[prop].ns};                      break;
         case 'm':  toReturn[prop] = {_op: 'm',   om:   delta[prop].nm, nm: delta[prop].om};  break;
@@ -362,8 +368,10 @@ operations | params
   }
 
   function check(target, delta) {
+    if (typeof target === 'undefined' || typeof delta === 'undefined')
+      return typeof target === 'undefined' && typeof delta === 'undefined';
     return Object.keys(delta).every(function(prop) {
-      if (!('_op' in delta[prop]))
+      if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
         return check(target[prop], delta[prop]);
       try {
         switch(delta[prop]._op) {

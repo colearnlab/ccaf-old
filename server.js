@@ -37,7 +37,7 @@ addresses.forEach(function(address) {
   setInterval(function() {
     var message = new Buffer(JSON.stringify({'ports': config.ports}));
     dgramClient.send(message, 0, message.length, config.ports.udp, ip.subnet(address, config.subnet).broadcastAddress);
-  }, 100);
+  }, 150);
 });
 
 var checkerboard = new (require('./checkerboard-server')).Server(config.ports.ws, db, 250);

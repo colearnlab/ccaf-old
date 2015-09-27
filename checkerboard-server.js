@@ -9,7 +9,9 @@ module.exports.Server = function(port, inputState, opts) {
   this.websocketServer = new WebSocket.Server({'port': port});
   this.state = inputState || {};
       
-  this.on('get', function(conn, message) {
+  var tfn;
+  this.on('get', tfn = function(conn, message) {
+    var data = getByPath(this.state, message.path);
     conn.sendObj('get-returned', {'data': getByPath(this.state, message.path), 'id': message.id});
   });
   
@@ -23,20 +25,24 @@ module.exports.Server = function(port, inputState, opts) {
   
   var that = this;
   this.on('attempt', function(conn, message) {
-    var successes = [];
     var savedState = JSON.parse(JSON.stringify(that.state));
-    message.attempts.every(function(attempt) {
+    var successes = message.attempts.filter(function(attempt) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
-        successes.push(attempt.id);
         return true;
       }
       return false;
+    }).map(function(attempt) {
+      return attempt.id;
     });
     conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes});
     var delta = diff(savedState, that.state);
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
-        var delta = diff(getByPath(savedState, otherConn.subs[id]), getByPath(that.state, otherConn.subs[id]));
+        var a = getByPath(savedState, otherConn.subs[id]);
+        var b = getByPath(that.state, otherConn.subs[id]);
+        if (!(isPOJS(a) && isPOJS(b)))
+          return;
+        var delta = diff(a, b);
         if (typeof delta !== 'undefined')
           otherConn.sendObj('update-state', {'id': id, 'delta': delta});
       });

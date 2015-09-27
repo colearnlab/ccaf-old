@@ -2,7 +2,7 @@ define(['clientUtil'], function(clientUtil) {
   var exports = {};
   var appRoot, parentElement, params;
 
-  var canvas, ctx, touchToPath, paths, version, pen, lastPath = [], version;
+  var canvas, ctx, touchToPath, touchToSub, paths, version, pen, lastPath = [], version;
   
   function PathFactory(props) {
     var obj = {};
@@ -11,7 +11,7 @@ define(['clientUtil'], function(clientUtil) {
       obj.Y = {};
       obj.pen = pen;
       obj.strokeFinished = false;
-      obj.id = Math.floor((1 + Math.random()) * 0x10000000).toString(16);
+      obj.id = 'a'+Math.floor((1 + Math.random()) * 0x10000000).toString(16);
       obj.lastPoint = null;
       
       return obj;
@@ -74,6 +74,7 @@ define(['clientUtil'], function(clientUtil) {
     ctx = canvas.getContext('2d');
 
     touchToPath = {};
+    touchToSub = {};
     paths = {};
     pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
     clearScreen();
@@ -92,6 +93,10 @@ define(['clientUtil'], function(clientUtil) {
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
         appRoot.try(function(root) {
           root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+        }, function() {
+          var tmp = appRoot.subscribe('deviceState.' + params.device + '.paths.' + touchToPath[ct.identifier].id, undefined, function() {
+            touchToSub[ct.identifier] = tmp;
+          });
         });
       });
     };
@@ -99,24 +104,27 @@ define(['clientUtil'], function(clientUtil) {
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
-        appRoot.try(function(root) {
-          for (var i = 0; i < Object.keys(touchToPath[ct.identifier].X).length; i++) {
-            if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
-               root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].X[i] = touchToPath[ct.identifier].X[i];
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].Y[i] = touchToPath[ct.identifier].Y[i];
-          }
-        });
+        if (typeof touchToSub[ct.identifier] !== 'undefined') {
+          touchToSub[ct.identifier].try(function(path) {
+            path.X = touchToPath[ct.identifier].X;
+            path.Y = touchToPath[ct.identifier].Y;
+          });
+        }
       });
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        appRoot.try(function(root) {
-          if (typeof root.deviceState[params.device].paths[touchToPath[ct.identifier].id] === 'undefined')
-               root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
-            root.deviceState[params.device].paths[touchToPath[ct.identifier].id].strokeFinished = true;
-        });
+        if (typeof touchToSub[ct.identifier] !== 'undefined') {
+          touchToSub[ct.identifier].try(function(path) {
+            path.X = touchToPath[ct.identifier].X;
+            path.Y = touchToPath[ct.identifier].Y;
+            path.strokeFinished = true;
+          }, function() {
+            touchToSub[ct.identifier].unsubscribe();
+            delete touchToSub[ct.identifier];
+          });
+        }
       });
     };
 
