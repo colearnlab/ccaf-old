@@ -10,4 +10,5 @@
 	padding: 12pt;
 	border-radius: 12pt;
 	text-align: center;
+	z-index: 100;
 }

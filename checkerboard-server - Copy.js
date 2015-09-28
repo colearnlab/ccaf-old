@@ -16,7 +16,7 @@ module.exports.Server = function(port, inputState, opts) {
   });
   
   this.on('subscribe', function(conn, message) {
-      conn.subs[message.id] = message.path;
+    conn.subs[message.id] = message.path;
   });
   
   this.on('unsubscribe', function(conn, message) {
@@ -24,7 +24,9 @@ module.exports.Server = function(port, inputState, opts) {
   });
   
   var that = this;
+  var a = false;
   this.on('attempt', function(conn, message) {
+    console.time('attempt');
     var savedState = JSON.parse(JSON.stringify(that.state));
     var successes = message.attempts.filter(function(attempt) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
@@ -35,21 +37,65 @@ module.exports.Server = function(port, inputState, opts) {
       return attempt.id;
     });
     conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes});
-    var delta = diff(savedState, that.state);
+    
+    var a = getByPath(savedState, message.path);
+    var b = getByPath(that.state, message.path);
+    if (!(isPOJS(a) && isPOJS(b)))
+      return;
+    var delta = diff(a, b);
+    
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
-        var a = getByPath(savedState, otherConn.subs[id]);
-        var b = getByPath(that.state, otherConn.subs[id]);
-        if (!(isPOJS(a) && isPOJS(b)))
+        debugger;
+        if (!isChild(message.path, otherConn.subs[id]))
           return;
-        var delta = diff(a, b);
+          
         (function(delta) {        
           if (typeof delta !== 'undefined')
-            otherConn.enqueue('update-state', {'id': id, 'delta': delta});
+            otherConn.enqueue('update-state', {'id': id, 'delta': wrap(pathDifference(message.path, otherConn.subs[id]), delta)});
         }(delta));
       });
     });
+    console.timeEnd('attempt');
   });
+  
+  // returns true if testPath is within basePath
+  function isChild(testPath, basePath) {
+    if (typeof basePath === 'string')
+      basePath = basePath.split('.');
+    if (typeof testPath === 'string')
+      testPath = testPath.split('.');
+    
+    if (basePath.length === 1)
+        return basePath[0] === testPath[0];
+    if (testPath.length < basePath.length)
+      return false;
+    
+    return isChild(testPath.splice(1), basePath.splice(1));
+  };
+  
+  // wrap an object in its path
+  // e.g. wrap('test.test', obj) returns {'test': {'test': obj}};
+  function wrap(path, obj) {
+    if (typeof path === 'string')
+      path = path.split('.');
+      
+    var wrapper = {};
+    if (path.length === 0)
+      return obj;
+    wrapper[path[path.length - 1]] = obj;
+    if (path.length === 1)
+      return wrapper;
+      
+    return wrap(path.splice(0, path.length - 1), wrapper);
+  }
+  
+  function pathDifference(childPath, parentPath) {
+    if (!isChild(childPath, parentPath))
+      return null;
+      
+    return childPath.split('.').splice(parentPath.split('.').length - 1).join('.');
+  }
 
   var that = this;
   var conns = [];
@@ -67,7 +113,7 @@ module.exports.Server = function(port, inputState, opts) {
 
     conn.on('close', function() {
       that.emit('close', wrapped);
-      conns.splice(conns.indexOf(wrapped), 1);
+      conns.splice(conns.indexOf(conn), 1);
     });
   });
   
@@ -95,10 +141,10 @@ function isPOJS(prop) {
 }
 
 function ConnWrapper(conn, opts) {
+  this.opts = opts || {};
   this.conn = conn;
   this.queue = [];
   this.subs = {};
-  this.opts = opts;
 }
 
 ConnWrapper.prototype.sendObj = function(channel, message) {

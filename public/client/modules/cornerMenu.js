@@ -48,8 +48,8 @@ define(['clientUtil', 'mithril', 'interact', './main'], function(clientUtil, m, 
             clearTimeout(timeout);
             setTimeout(function() {
               document.querySelector('.circle').classList.remove('open');
-              document.querySelector('.corner-shadow').style.width = '450px';
-              document.querySelector('.corner-shadow').style.height = '550px';
+              document.querySelector('.corner-shadow').style.width = '400px';
+              document.querySelector('.corner-shadow').style.height = '500px';
               document.querySelector('.corner-shadow').style.opacity = '0.25';
             }, 50);
           }

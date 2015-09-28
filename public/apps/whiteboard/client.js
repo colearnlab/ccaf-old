@@ -105,11 +105,11 @@ define(['clientUtil'], function(clientUtil) {
 
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        if (typeof touchToPath[ct.identifier] === 'undefined')
-          return;
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
         if (typeof touchToSub[ct.identifier] !== 'undefined') {
           touchToSub[ct.identifier].try(function(path) {
+            if (typeof touchToPath[ct.identifier] === 'undefined')
+              return;
             path.X = touchToPath[ct.identifier].X;
             path.Y = touchToPath[ct.identifier].Y;
           });
@@ -118,9 +118,12 @@ define(['clientUtil'], function(clientUtil) {
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
+
       [].forEach.call(e.changedTouches, function(ct) {
         if (typeof touchToSub[ct.identifier] !== 'undefined') {
           touchToSub[ct.identifier].try(function(path) {
+           if (typeof touchToPath[ct.identifier] === 'undefined')
+              return;
             path.X = touchToPath[ct.identifier].X;
             path.Y = touchToPath[ct.identifier].Y;
             path.strokeFinished = true;
