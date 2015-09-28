@@ -1,7 +1,7 @@
 var WebSocket = require('./node_modules/ws/index.js');
 var events = require('events');
 var util = require('util');
-var diffpatch = require('./public/lib/diffpatch.js'), diff = diffpatch.diff, patch = diffpatch.patch;
+var diffpatch = require('./public/lib/diffpatch.js'), diff = diffpatch.diff, diffA = diffpatch.diffA, patch = diffpatch.patch;
 module.exports.Server = function(port, inputState, opts) {
   if (typeof opts === 'undefined')
     opts = {};
@@ -16,10 +16,14 @@ module.exports.Server = function(port, inputState, opts) {
   });
   
   this.on('subscribe', function(conn, message) {
+          console.log('y');
+
     conn.subs[message.id] = message.path;
   });
   
   this.on('unsubscribe', function(conn, message) {
+      console.log('x');
+
     delete conn.subs[message.id];
   });
   
@@ -43,8 +47,10 @@ module.exports.Server = function(port, inputState, opts) {
         if (!(isPOJS(a) && isPOJS(b)))
           return;
         var delta = diff(a, b);
-        if (typeof delta !== 'undefined')
-          otherConn.sendObj('update-state', {'id': id, 'delta': delta});
+        (function(delta) {        
+          if (typeof delta !== 'undefined')
+            otherConn.sendObj('update-state', {'id': id, 'delta': delta});
+        }(delta));
       });
     });
   });

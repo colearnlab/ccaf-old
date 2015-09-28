@@ -40,7 +40,7 @@ addresses.forEach(function(address) {
   }, 150);
 });
 
-var checkerboard = new (require('./checkerboard-server')).Server(config.ports.ws, db, 250);
+var checkerboard = new (require('./checkerboard-server')).Server(config.ports.ws, db, {refreshRate:1000});
 console.log('Websocket port: ' + config.ports.ws);
 
 var connect = require('connect');

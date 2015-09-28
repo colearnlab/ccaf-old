@@ -46,8 +46,10 @@ define(['clientUtil'], function(clientUtil) {
     
     var startX, startY;
     for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
-      startX = path.X[i-1] || path.X[i]-1;
-      startY = path.Y[i-1] || path.Y[i];
+      if (typeof path.X[i] === 'undefined')
+        continue;
+      startX = path.X[i-1] || path.X[i-2] || path.X[i]-1;
+      startY = path.Y[i-1] || path.Y[i-2] || path.Y[i];
       ctx.beginPath();
 
       ctx.moveTo(startX, startY);
@@ -103,6 +105,8 @@ define(['clientUtil'], function(clientUtil) {
 
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
+        if (typeof touchToPath[ct.identifier] === 'undefined')
+          return;
         addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
         if (typeof touchToSub[ct.identifier] !== 'undefined') {
           touchToSub[ct.identifier].try(function(path) {
@@ -148,9 +152,8 @@ define(['clientUtil'], function(clientUtil) {
       clearScreen();
       version = root.version;
       drawnByMe = {};
-      Object.keys(touchToPath).forEach(function(id) {
-        drawnByMe[touchToPath[id].id] = true;
-      });
+      touchToSub = {};
+      touchToPath = {};
     }
     for (var prop in root.paths) {
       if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true))

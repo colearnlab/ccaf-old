@@ -104,7 +104,7 @@ operations | params
   };
   
   STM.prototype.unsubscribe = function() {
-    this.send('unsusbcribe', {'id': Object.keys(this.subCallbacks)[0]});
+    this.send('unsubscribe', {'id': Object.keys(this.subCallbacks)[0]});
   };
 
   STM.prototype.try = function(callback, then) {
@@ -161,7 +161,7 @@ operations | params
             return toSync.syncing = false;
           }
           var a = attempts[i];
-          diffA(origin, comparand, function(result) {
+          diffADebug(origin, comparand, function(result) {
             if (typeof result === 'undefined')
               a.then();
             else {
@@ -254,7 +254,7 @@ operations | params
         var j = i;
         setZeroTimeout(function() {
           var k = j;
-          diffADebug(origin[props[j]], comparand[props[j]], function(result) {
+          diffA(origin[props[j]], comparand[props[j]], function(result) {
             if (typeof result !== 'undefined')
               delta[props[k]] = result;
           
@@ -449,9 +449,9 @@ operations | params
   })();
 
   if (typeof define !== 'undefined')
-    define({'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse});
+    define({'STM': STM, 'diff': diff, 'diffA': diffA,'patch': patch, 'reverse': reverse});
   else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-    module.exports = {'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse};
+    module.exports = {'STM': STM, 'diff': diff, 'diffA': diffA, 'patch': patch, 'reverse': reverse};
   else
     window.STM = STM;
 }());
