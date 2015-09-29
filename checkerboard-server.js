@@ -25,6 +25,7 @@ module.exports.Server = function(port, inputState, opts) {
   
   var that = this;
   this.on('attempt', function(conn, message) {
+    console.time('attempt');
     var savedState = JSON.parse(JSON.stringify(that.state));
     var successes = message.attempts.filter(function(attempt) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
@@ -35,23 +36,30 @@ module.exports.Server = function(port, inputState, opts) {
       return attempt.id;
     });
     conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes});
-    var delta = diff(savedState, that.state);
+    var cache = {};
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
         if (!isChild(message.path, otherConn.subs[id]))
           return;
-          
-        var a = getByPath(savedState, otherConn.subs[id]);
-        var b = getByPath(that.state, otherConn.subs[id]);
-        if (!(isPOJS(a) && isPOJS(b)))
-          return;
-        var delta = diff(a, b);
+        var delta;
+        if (otherConn.subs[id] in cache)
+          delta = cache[otherConn.subs[id]];
+        else {
+          var a = getByPath(savedState, otherConn.subs[id]);
+          var b = getByPath(that.state, otherConn.subs[id]);
+          if (!(isPOJS(a) && isPOJS(b)))
+            return;
+          delta = diff(a, b);
+          cache[otherConn.subs[id]] = delta;
+        }
         (function(delta) {        
           if (typeof delta !== 'undefined')
             otherConn.enqueue('update-state', {'id': id, 'delta': delta});
         }(delta));
       });
     });
+        console.timeEnd('attempt');
+
   });
   
     function isChild(testPath, basePath) {
@@ -66,6 +74,7 @@ module.exports.Server = function(port, inputState, opts) {
       return false;
     
     return isChild(testPath.splice(1), basePath.splice(1));
+
   };
 
   var that = this;
