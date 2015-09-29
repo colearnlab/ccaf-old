@@ -9,6 +9,14 @@
 	font-size: 48pt;
 	padding: 12pt;
 	border-radius: 12pt;
+	border-color: white;
+	border-style: dashed;
+	border-width: 4pt;
 	text-align: center;
 	z-index: 100;
+}
+
+.close-text {
+  font-size: 20pt;
+  color: lightgray;
 }

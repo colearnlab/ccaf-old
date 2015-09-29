@@ -38,6 +38,9 @@ module.exports.Server = function(port, inputState, opts) {
     var delta = diff(savedState, that.state);
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
+        if (!isChild(message.path, otherConn.subs[id]))
+          return;
+          
         var a = getByPath(savedState, otherConn.subs[id]);
         var b = getByPath(that.state, otherConn.subs[id]);
         if (!(isPOJS(a) && isPOJS(b)))
@@ -50,6 +53,20 @@ module.exports.Server = function(port, inputState, opts) {
       });
     });
   });
+  
+    function isChild(testPath, basePath) {
+    if (typeof basePath === 'string')
+      basePath = basePath.split('.');
+    if (typeof testPath === 'string')
+      testPath = testPath.split('.');
+    
+    if (basePath.length === 1)
+        return basePath[0] === testPath[0];
+    if (testPath.length < basePath.length)
+      return false;
+    
+    return isChild(testPath.splice(1), basePath.splice(1));
+  };
 
   var that = this;
   var conns = [];

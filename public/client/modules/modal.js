@@ -12,8 +12,19 @@ define('modal', ['mithril', 'clientUtil'], function(m, clientUtil) {
         return m('div#modal', {
           'onclick': function(e) {
             ctrl.display(false);
+          },
+          'config': function(el) {
+            setTimeout(function() {
+              ctrl.display(false);
+              if (el.parentNode !== null)
+                el.parentNode.removeChild(el);
+            }, 5000);
           }
-        }, m.trust(args.text));
+        }, [
+          m('span', m.trust(args.text)),
+          m('div.close-text', 'Tap to close')
+        ]);
+        
       else return m('span');
     }
   }

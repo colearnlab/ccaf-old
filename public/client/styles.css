@@ -25,7 +25,7 @@ iframe {
 
 /* source: http://creative-punch.net/2014/02/making-animated-radial-menu-css3-javascript/ */
 .circular-menu {
-  pointer-events: none
+  pointer-events: none;
   width: 250px;
   height: 250px;
   right: -65px;
