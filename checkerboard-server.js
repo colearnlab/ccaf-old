@@ -25,6 +25,7 @@ module.exports.Server = function(port, inputState, opts) {
   
   var that = this;
   this.on('attempt', function(conn, message) {
+    console.time('attempt');
     var savedState = JSON.parse(JSON.stringify(that.state));
     var successes = message.attempts.filter(function(attempt) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
@@ -57,6 +58,8 @@ module.exports.Server = function(port, inputState, opts) {
         }(delta));
       });
     });
+        console.timeEnd('attempt');
+
   });
   
     function isChild(testPath, basePath) {

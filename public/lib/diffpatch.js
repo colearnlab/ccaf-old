@@ -48,7 +48,7 @@ operations | params
           that.transactionIds.splice(that.transactionIds.indexOf(envelope.message.id), 1);
           that.attempts = that.attempts.filter(function(attempt) {
             if (envelope.message.successes.indexOf(attempt.id) >= 0) {
-              attempt.then(that.state);
+              attempt.then();
               return false;
             } else {
               return true;
@@ -163,7 +163,7 @@ operations | params
           var a = attempts[i];
           diffADebug(origin, comparand, function(result) {
             if (typeof result === 'undefined')
-              a.then(comparand);
+              a.then();
             else {
               a.delta = result;
               a.id = ++transactionId;
