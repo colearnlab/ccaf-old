@@ -19,6 +19,10 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     require('electron-cookies');
   }
   
+  document.body.addEventListener('scroll', function(e) {
+     return e.preventDefault(), false;
+  });
+  
   document.body.addEventListener('touchmove', function(e) {
     if (e.target.tagName !== 'INPUT')
       return e.preventDefault(), false;
@@ -95,7 +99,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
             classrooms[classroom].appRoot[appData.path] = {};
         },
         function() {
-          classrooms.sync(10);
+          classrooms.sync(1000);
           appRoot = classrooms.subscribe(classroom + '.appRoot.' + appData.path, undefined, function() {
             app.startApp(appRoot, document.getElementById('app'),
               {'classroom': classroom, 'device': device});
