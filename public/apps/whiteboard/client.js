@@ -88,16 +88,67 @@ define(['clientUtil'], function(clientUtil) {
 
     parentElement.appendChild(controls);
 
+    var mouse = 0;
+    canvas.onmousedown = function(e) {
+      var id = 0;
+      mouse = 1;
+
+      touchToPath[id] = PathFactory();
+      drawnByMe[touchToPath[id].id] = true;
+      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, 0);
+      appRoot.try(function(root) {
+        root.deviceState[params.device].paths[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+      }, function() {
+        var tmp = appRoot.subscribe('deviceState.' + params.device + '.paths.' + touchToPath[id].id, undefined, function() {
+          touchToSub[id] = tmp;
+        });
+      }); 
+    }
+    
+    canvas.onmousemove = function(e) {
+      if (mouse === 0)
+        return;
+
+      var id = 0;
+        
+      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, 0);
+      if (typeof touchToSub[id] !== 'undefined') {
+        touchToSub[id].try(function(path) {
+          path.X = touchToPath[id].X;
+          path.Y = touchToPath[id].Y;
+        });
+      }
+    }
+    
+    canvas.onmouseup = canvas.onmouseout = function(e) {
+      if (mouse === 0)
+        return;
+        
+      mouse = 0;
+      var id = 0;
+      if (typeof touchToSub[id] !== 'undefined') {
+        touchToSub[id].try(function(path) {
+          path.X = touchToPath[id].X;
+          path.Y = touchToPath[id].Y;
+          path.strokeFinished = true;
+        }, function() {
+          touchToSub[id].unsubscribe();
+          delete touchToSub[id];
+        });
+      }
+    }
+
     canvas.ontouchstart = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        touchToPath[ct.identifier] = PathFactory();
-        drawnByMe[touchToPath[ct.identifier].id] = true;
-        addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
+        var id = ct.identifier + 1;
+        touchToPath[id] = PathFactory();
+        drawnByMe[touchToPath[id].id] = true;
+        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[touchToPath[ct.identifier].id] = JSON.parse(JSON.stringify(touchToPath[ct.identifier]));
+          root.deviceState[params.device].paths[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
         }, function() {
-          var tmp = appRoot.subscribe('deviceState.' + params.device + '.paths.' + touchToPath[ct.identifier].id, undefined, function() {
-            touchToSub[ct.identifier] = tmp;
+          var tmp = appRoot.subscribe('deviceState.' + params.device + '.paths.' + touchToPath[id].id, undefined, function() {
+            touchToSub[id] = tmp;
           });
         });
       });
@@ -105,27 +156,28 @@ define(['clientUtil'], function(clientUtil) {
 
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
-        addToPath(touchToPath[ct.identifier], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
-        if (typeof touchToSub[ct.identifier] !== 'undefined') {
-          touchToSub[ct.identifier].try(function(path) {
-            path.X = touchToPath[ct.identifier].X;
-            path.Y = touchToPath[ct.identifier].Y;
+        var id = ct.identifier + 1;
+        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
+        if (typeof touchToSub[id] !== 'undefined') {
+          touchToSub[id].try(function(path) {
+            path.X = touchToPath[id].X;
+            path.Y = touchToPath[id].Y;
           });
         }
       });
     };
 
     canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
-
       [].forEach.call(e.changedTouches, function(ct) {
-        if (typeof touchToSub[ct.identifier] !== 'undefined') {
-          touchToSub[ct.identifier].try(function(path) {
-            path.X = touchToPath[ct.identifier].X;
-            path.Y = touchToPath[ct.identifier].Y;
+        var id = ct.identifier + 1;
+        if (typeof touchToSub[id] !== 'undefined') {
+          touchToSub[id].try(function(path) {
+            path.X = touchToPath[id].X;
+            path.Y = touchToPath[id].Y;
             path.strokeFinished = true;
           }, function() {
-            touchToSub[ct.identifier].unsubscribe();
-            delete touchToSub[ct.identifier];
+            touchToSub[id].unsubscribe();
+            delete touchToSub[id];
           });
         }
       });
