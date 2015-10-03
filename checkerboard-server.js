@@ -31,6 +31,8 @@ module.exports.Server = function(port, inputState, opts) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
         return true;
       }
+      debugger;
+      patch(getByPath(that.state, message.path), attempt.delta)
       return false;
     }).map(function(attempt) {
       return attempt.id;

@@ -270,7 +270,7 @@ operations | params
   }
 
   // assert(isPOJS(origin) && isPOJS(comparand))
-  function diff(origin, comparand) {
+  function diff(origin, comparand, notRoot) {
     if (!isPOJS(origin) || !isPOJS(comparand))
       throw new Error('Attempting to diff a non-object');
     var delta = {}, props = [];
@@ -282,7 +282,7 @@ operations | params
       return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
     }, {});
     
-    if ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold))
+    if (typeof notRoot !== 'undefined' && ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold)))
       return {_op: 'm', om: origin, nm: comparand};
     
 
@@ -307,7 +307,7 @@ operations | params
         delta[props[i]] = {_op: 'du'};
       else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && origin[props[i]] !== comparand[props[i]]))
         delta[props[i]] = {_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
-      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]])) !== 'undefined')
+      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]], true)) !== 'undefined')
         delta[props[i]] = subDelta;
     }
 
@@ -318,25 +318,33 @@ operations | params
   function patch(target, delta, checked) {
     if (typeof delta === 'undefined')
       return true;
-      
+    
+    if ('_op' in delta) {
+      target = {0: target};
+      delta = {0: delta};
+    }
+    
     if (typeof checked === 'undefined' && !check(target, delta))
       return false;
       
+    if (typeof process !== 'undefined')
+      debugger;
     Object.keys(delta).forEach(function(prop) {
-      if (!('_op' in delta[prop]))
+      if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
         patch(target[prop], delta[prop]);
-      
-      switch(delta[prop]._op) {
-        case 's':  target[prop] = delta[prop].ns;   break;
-        case 'm':  target[prop] = delta[prop].nm;   break;
-        case 'su': target[prop] = undefined;        break;
-        case 'mu': target[prop] = delta[prop].nmu;  break;
-        case 'd':
-        case 'du':
-          if (target instanceof Array)
-            target.splice(prop, 1)
-          else
-            delete target[prop];                    break;
+      else {
+        switch(delta[prop]._op) {
+          case 's':  target[prop] = delta[prop].ns;   break;
+          case 'm':  target[prop] = delta[prop].nm;   break;
+          case 'su': target[prop] = undefined;        break;
+          case 'mu': target[prop] = delta[prop].nmu;  break;
+          case 'd':
+          case 'du':
+            if (target instanceof Array)
+              target.splice(prop, 1)
+            else
+              delete target[prop];                    break;
+        }
       }
     });
     
