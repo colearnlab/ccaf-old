@@ -97,9 +97,9 @@ define(['clientUtil'], function(clientUtil) {
       drawnByMe[touchToPath[id].id] = true;
       addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, 0);
       appRoot.try(function(root) {
-        root.deviceState[params.device].paths[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
-      }, function() {
-        var tmp = appRoot.subscribe('deviceState.' + params.device + '.paths.' + touchToPath[id].id, undefined, function() {
+         root.deviceState[params.device].drawings[root.deviceState[params.device].version][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+      }, function(root) {
+        var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version + '.' + touchToPath[id].id, undefined, function() {
           touchToSub[id] = tmp;
         });
       }); 
@@ -145,9 +145,9 @@ define(['clientUtil'], function(clientUtil) {
         drawnByMe[touchToPath[id].id] = true;
         addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
         appRoot.try(function(root) {
-          root.deviceState[params.device].paths[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
-        }, function() {
-          var tmp = appRoot.subscribe('deviceState.' + params.device + '.paths.' + touchToPath[id].id, undefined, function() {
+           root.deviceState[params.device].drawings[root.deviceState[params.device].version][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+        }, function(root) {
+          var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version + '.' + touchToPath[id].id, undefined, function() {
             touchToSub[id] = tmp;
           });
         });
@@ -187,25 +187,18 @@ define(['clientUtil'], function(clientUtil) {
       if (typeof root.deviceState === 'undefined')
         root.deviceState = {};
       if (typeof root.deviceState[params.device] === 'undefined')
-        root.deviceState[params.device] = {'paths': {}, 'version': 0}
+        root.deviceState[params.device] = {'drawings': {0:{}}, 'version': 0}
       root.deviceState[params.device].device = params.device;
-    }, function() {
-      appRoot.subscribe(update, update);
+    }, function(root) {
+      appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version, update, update);
     });
   };
 
   var version;
   var drawnByMe = {};
-  function update(root) {
-    root = root.deviceState[params.device];
-    if (root.version !== version) {
-      console.log('screen cleared');
-      clearScreen();
-      version = root.version;
-      drawnByMe = {};
-      touchToSub = {};
-      touchToPath = {};
-    }
+  function update(_root) {
+    root = {paths: _root};
+
     for (var prop in root.paths) {
       if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true))
         continue;
@@ -221,7 +214,6 @@ define(['clientUtil'], function(clientUtil) {
 
   function clearScreen() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     lastDraw = [];
   }
 
@@ -239,8 +231,7 @@ define(['clientUtil'], function(clientUtil) {
             'onclick': function() {
               document.body.classList.add('frozen');
               appRoot.try(function(root) {
-                root.deviceState[params.device].paths = {};
-                root.deviceState[params.device].version++;
+                root.deviceState[params.device].drawings[++root.deviceState[params.device].version] = {};
               }, function(state) {
                 document.body.classList.remove('frozen');
                 paths = {};

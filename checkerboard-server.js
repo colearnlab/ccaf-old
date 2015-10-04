@@ -31,17 +31,17 @@ module.exports.Server = function(port, inputState, opts) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
         return true;
       }
-      debugger;
       patch(getByPath(that.state, message.path), attempt.delta)
       return false;
     }).map(function(attempt) {
       return attempt.id;
     });
-    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes});
+    var k = diff(getByPath(savedState, message.path), getByPath(that.state, message.path));
+    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes, 'delta': k});
     var cache = {};
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
-        if (!isChild(message.path, otherConn.subs[id]))
+        if (otherConn === conn && otherConn.subs[id] === message.path)
           return;
         var delta;
         if (otherConn.subs[id] in cache)
@@ -63,21 +63,6 @@ module.exports.Server = function(port, inputState, opts) {
         console.timeEnd('attempt');
 
   });
-  
-    function isChild(testPath, basePath) {
-    if (typeof basePath === 'string')
-      basePath = basePath.split('.');
-    if (typeof testPath === 'string')
-      testPath = testPath.split('.');
-    
-    if (basePath.length === 1)
-        return basePath[0] === testPath[0];
-    if (testPath.length < basePath.length)
-      return false;
-    
-    return isChild(testPath.splice(1), basePath.splice(1));
-
-  };
 
   var that = this;
   var conns = [];

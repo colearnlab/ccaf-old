@@ -46,9 +46,10 @@ operations | params
           if (that.transactionIds.indexOf(envelope.message.id) < 0)
             return;
           that.transactionIds.splice(that.transactionIds.indexOf(envelope.message.id), 1);
+          patch(that.state, envelope.message.delta);
           that.attempts = that.attempts.filter(function(attempt) {
             if (envelope.message.successes.indexOf(attempt.id) >= 0) {
-              attempt.then();
+              attempt.then(that.state);
               return false;
             } else {
               return true;
@@ -163,7 +164,7 @@ operations | params
           var a = attempts[i];
           diffADebug(origin, comparand, function(result) {
             if (typeof result === 'undefined')
-              a.then();
+              a.then(comparand);
             else {
               a.delta = result;
               a.id = ++transactionId;
@@ -327,8 +328,6 @@ operations | params
     if (typeof checked === 'undefined' && !check(target, delta))
       return false;
       
-    if (typeof process !== 'undefined')
-      debugger;
     Object.keys(delta).forEach(function(prop) {
       if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
         patch(target[prop], delta[prop]);

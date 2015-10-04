@@ -19,6 +19,10 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     require('electron-cookies');
   }
   
+  document.body.addEventListener('scroll', function(e) {
+    return e.preventDefault(), false;
+  });
+  
   document.body.addEventListener('touchmove', function(e) {
     if (e.target.tagName !== 'INPUT')
       return e.preventDefault(), false;
