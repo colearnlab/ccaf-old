@@ -101,6 +101,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
         function() {
           classrooms.sync(5);
           appRoot = classrooms.subscribe(classroom + '.appRoot.' + appData.path, undefined, function() {
+            classrooms.unsubscribe();
             app.startApp(appRoot, document.getElementById('app'),
               {'classroom': classroom, 'device': device});
           });

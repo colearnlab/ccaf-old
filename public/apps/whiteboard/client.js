@@ -202,7 +202,7 @@ define(['clientUtil'], function(clientUtil) {
     paths = {};
     clearScreen();
     drawSub.unsubscribe();
-    appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
+    drawSub = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
   }
   
   function update(_root) {

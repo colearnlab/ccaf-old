@@ -36,28 +36,27 @@ module.exports.Server = function(port, inputState, opts) {
     }).map(function(attempt) {
       return attempt.id;
     });
-    var k = diff(getByPath(savedState, message.path), getByPath(that.state, message.path));
+    var delta = diff(savedState, that.state);
+    var k = getByPath(delta, message.path);;
     conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes, 'delta': k});
+    
+    
     var cache = {};
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
         if (otherConn === conn && otherConn.subs[id] === message.path)
           return;
-        var delta;
-        if (otherConn.subs[id] in cache)
-          delta = cache[otherConn.subs[id]];
-        else {
-          var a = getByPath(savedState, otherConn.subs[id]);
-          var b = getByPath(that.state, otherConn.subs[id]);
-          if (!(isPOJS(a) && isPOJS(b)))
-            return;
-          delta = diff(a, b);
-          cache[otherConn.subs[id]] = delta;
-        }
-        (function(delta) {        
-          if (typeof delta !== 'undefined')
-            otherConn.enqueue('update-state', {'id': id, 'delta': delta});
-        }(delta));
+        var subdelta;
+          subdelta = getByPath(delta, otherConn.subs[id]);
+          debug = diff(getByPath(savedState,otherConn.subs[id]), getByPath(that.state, otherConn.subs[id]));
+          try {
+          if (typeof diff(subdelta, debug) !== 'undefined')
+            debugger;
+            } catch(e) { }
+        (function(subdelta) {        
+          if (subdelta !== null)
+            otherConn.enqueue('update-state', {'id': id, 'delta': subdelta, 'debug': debug});
+        }(subdelta));
       });
     });
         console.timeEnd('attempt');
