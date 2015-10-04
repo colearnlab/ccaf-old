@@ -190,18 +190,18 @@ define(['clientUtil'], function(clientUtil) {
         root.deviceState[params.device] = {'drawings': {0:{}}, 'version': [0]}
       root.deviceState[params.device].device = params.device;
     }, function(root) {
-      appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0], update, update);
+      drawSub = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0], update, update);
       appRoot.subscribe('deviceState.' + params.device + '.version', newVersion);
     });
   };
-
+   var drawSub;
   var version;
   var drawnByMe = {};
   
   function newVersion(vArray) {
     paths = {};
     clearScreen();
-    appRoot.unsubscribe('deviceState.' + params.device + '.drawings.' + (vArray[0] - 1));
+    drawSub.unsubscribe();
     appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
   }
   
