@@ -36,33 +36,48 @@ module.exports.Server = function(port, inputState, opts) {
     }).map(function(attempt) {
       return attempt.id;
     });
-    var k = diff(getByPath(savedState, message.path), getByPath(that.state, message.path));
-    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes, 'delta': k});
+    var delta = diff(getByPath(savedState, message.path), getByPath(that.state, message.path), false);
+    var wrapped = wrap(delta, message.path);
+    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes, 'delta': getByPath(wrapped, message.path)});
     var cache = {};
+
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
         if (otherConn === conn && otherConn.subs[id] === message.path)
           return;
-        var delta;
+        var subdelta;
         if (otherConn.subs[id] in cache)
-          delta = cache[otherConn.subs[id]];
+          subdelta = cache[otherConn.subs[id]];
         else {
-          var a = getByPath(savedState, otherConn.subs[id]);
-          var b = getByPath(that.state, otherConn.subs[id]);
-          if (!(isPOJS(a) && isPOJS(b)))
-            return;
-          delta = diff(a, b);
-          cache[otherConn.subs[id]] = delta;
+          subdelta = getByPath(wrapped, otherConn.subs[id]);
+          cache[otherConn.subs[id]] = subdelta;
         }
-        (function(delta) {        
-          if (typeof delta !== 'undefined')
-            otherConn.enqueue('update-state', {'id': id, 'delta': delta});
-        }(delta));
+        (function(subdelta) {        
+          if (subdelta !== null && typeof subdelta !== 'undefined') {
+            otherConn.enqueue('update-state', {'id': id, 'delta': subdelta});
+          }
+        }(subdelta));
       });
     });
         console.timeEnd('attempt');
 
   });
+  
+  function wrap(obj, path, root) {
+    if (typeof root === 'undefined')
+      root = {};
+    
+    var c = path.split('.');
+    if (c.length === 1) {
+      root[c[0]] = obj;
+      return;
+    }
+    
+    root[c[0]] = {};
+    wrap(obj, c.splice(1).join('.'), root[c[0]]);
+    
+    return root;
+  };
 
   var that = this;
   var conns = [];

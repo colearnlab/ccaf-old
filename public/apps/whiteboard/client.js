@@ -201,8 +201,9 @@ define(['clientUtil'], function(clientUtil) {
   function newVersion(vArray) {
     paths = {};
     clearScreen();
+    console.log(drawSub.basePath);
     drawSub.unsubscribe();
-    appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
+    drawSub = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
   }
   
   function update(_root) {

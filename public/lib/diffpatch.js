@@ -283,9 +283,11 @@ operations | params
       return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
     }, {});
     
-    if (typeof notRoot !== 'undefined' && ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold)))
-      return {_op: 'm', om: origin, nm: comparand};
+    //if ((typeof notRoot !== 'undefined' || notRoot === true) && ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold)))
+    //  return {_op: 'm', om: origin, nm: comparand};
     
+    if (typeof notRoot === 'undefined')
+      notRoot = true;
 
     for (var i = 0; i < props.length; i++) {
       fPropInOrigin = props[i] in origin;
@@ -308,7 +310,7 @@ operations | params
         delta[props[i]] = {_op: 'du'};
       else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && origin[props[i]] !== comparand[props[i]]))
         delta[props[i]] = {_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
-      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]], true)) !== 'undefined')
+      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]], notRoot)) !== 'undefined')
         delta[props[i]] = subDelta;
     }
 
