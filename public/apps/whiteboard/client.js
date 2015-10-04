@@ -97,9 +97,9 @@ define(['clientUtil'], function(clientUtil) {
       drawnByMe[touchToPath[id].id] = true;
       addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, 0);
       appRoot.try(function(root) {
-         root.deviceState[params.device].drawings[root.deviceState[params.device].version][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+         root.deviceState[params.device].drawings[root.deviceState[params.device].version[0]][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
       }, function(root) {
-        var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version + '.' + touchToPath[id].id, undefined, function() {
+        var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0] + '.' + touchToPath[id].id, undefined, function() {
           touchToSub[id] = tmp;
         });
       }); 
@@ -145,9 +145,9 @@ define(['clientUtil'], function(clientUtil) {
         drawnByMe[touchToPath[id].id] = true;
         addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
         appRoot.try(function(root) {
-           root.deviceState[params.device].drawings[root.deviceState[params.device].version][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+           root.deviceState[params.device].drawings[root.deviceState[params.device].version[0]][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
         }, function(root) {
-          var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version + '.' + touchToPath[id].id, undefined, function() {
+          var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0] + '.' + touchToPath[id].id, undefined, function() {
             touchToSub[id] = tmp;
           });
         });
@@ -187,15 +187,24 @@ define(['clientUtil'], function(clientUtil) {
       if (typeof root.deviceState === 'undefined')
         root.deviceState = {};
       if (typeof root.deviceState[params.device] === 'undefined')
-        root.deviceState[params.device] = {'drawings': {0:{}}, 'version': 0}
+        root.deviceState[params.device] = {'drawings': {0:{}}, 'version': [0]}
       root.deviceState[params.device].device = params.device;
     }, function(root) {
-      appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version, update, update);
+      appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0], update, update);
+      appRoot.subscribe('deviceState.' + params.device + '.version', newVersion);
     });
   };
 
   var version;
   var drawnByMe = {};
+  
+  function newVersion(vArray) {
+    paths = {};
+    clearScreen();
+    appRoot.unsubscribe('deviceState.' + params.device + '.drawings.' + (vArray[0] - 1));
+    appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
+  }
+  
   function update(_root) {
     root = {paths: _root};
 
@@ -231,7 +240,7 @@ define(['clientUtil'], function(clientUtil) {
             'onclick': function() {
               document.body.classList.add('frozen');
               appRoot.try(function(root) {
-                root.deviceState[params.device].drawings[++root.deviceState[params.device].version] = {};
+                root.deviceState[params.device].drawings[++root.deviceState[params.device].version[0]] = {};
               }, function(state) {
                 document.body.classList.remove('frozen');
                 paths = {};
