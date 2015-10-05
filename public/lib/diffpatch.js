@@ -156,14 +156,12 @@ operations | params
             return;
           }
            
-          try {
-            attempts[i].callback(comparand);
-          } catch(e){
-            debugger;
-            return toSync.syncing = false;
-          }
+          attempts[i].callback(comparand);
           var a = attempts[i];
+          console.time(1);
           diffADebug(origin, comparand, function(result) {
+          console.timeEnd(1);
+          console.log(result);
             if (typeof result === 'undefined')
               a.then(comparand);
             else {

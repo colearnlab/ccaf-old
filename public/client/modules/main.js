@@ -19,7 +19,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     require('electron-cookies');
   }
   
-  document.body.addEventListener('scroll', function(e) {
+  document.body.addEventListener('mousewheel', function(e) {
     return e.preventDefault(), false;
   });
   

@@ -9,6 +9,7 @@ define(['clientUtil'], function(clientUtil) {
     if (arguments.length === 0) {
       obj.X = {};
       obj.Y = {};
+      obj.t = {};
       obj.pen = pen;
       obj.strokeFinished = false;
       obj.id = 'a'+Math.floor((1 + Math.random()) * 0x10000000).toString(16);
@@ -27,14 +28,15 @@ define(['clientUtil'], function(clientUtil) {
     }
   }
   
- addToPath = function(path, x, y) {
+ addToPath = function(path, x, y, t) {
     if (isNaN(x) || x === null || isNaN(y) || y === null)
       return;
     
     var loc = Object.keys(path.X).length;
     
-    path.X[loc] = x;
-    path.Y[loc] = y;
+    path.X[loc] = parseInt(x);
+    path.Y[loc] = parseInt(y);
+    path.t[loc] = t;
     
     drawPath(path);
   }
@@ -48,8 +50,8 @@ define(['clientUtil'], function(clientUtil) {
     for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
       if (typeof path.X[i] === 'undefined')
         continue;
-      startX = path.X[i-1] || path.X[i-2] || path.X[i]-1;
-      startY = path.Y[i-1] || path.Y[i-2] || path.Y[i];
+      startX = path.X[i-1] || path.X[i]-1;
+      startY = path.Y[i-1] || path.Y[i];
       ctx.beginPath();
 
       ctx.moveTo(startX, startY);
@@ -95,11 +97,11 @@ define(['clientUtil'], function(clientUtil) {
 
       touchToPath[id] = PathFactory();
       drawnByMe[touchToPath[id].id] = true;
-      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, 0);
-      appRoot.try(function(root) {
-         root.deviceState[params.device].drawings[root.deviceState[params.device].version[0]][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
+      drawSub.try(function(root) {
+         root[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
       }, function(root) {
-        var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0] + '.' + touchToPath[id].id, undefined, function() {
+        var tmp = drawSub.subscribe(touchToPath[id].id, undefined, function() {
           touchToSub[id] = tmp;
         });
       }); 
@@ -111,11 +113,12 @@ define(['clientUtil'], function(clientUtil) {
 
       var id = 0;
         
-      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, 0);
+      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
       if (typeof touchToSub[id] !== 'undefined') {
         touchToSub[id].try(function(path) {
           path.X = touchToPath[id].X;
           path.Y = touchToPath[id].Y;
+          path.t = touchToPath[id].t;
         });
       }
     }
@@ -130,6 +133,7 @@ define(['clientUtil'], function(clientUtil) {
         touchToSub[id].try(function(path) {
           path.X = touchToPath[id].X;
           path.Y = touchToPath[id].Y;
+          path.t = touchToPath[id].t;
           path.strokeFinished = true;
         }, function() {
           touchToSub[id].unsubscribe();
@@ -143,25 +147,32 @@ define(['clientUtil'], function(clientUtil) {
         var id = ct.identifier + 1;
         touchToPath[id] = PathFactory();
         drawnByMe[touchToPath[id].id] = true;
-        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 0);
-        appRoot.try(function(root) {
-           root.deviceState[params.device].drawings[root.deviceState[params.device].version[0]][touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
+        drawSub.try(function(root) {
+           root[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
         }, function(root) {
-          var tmp = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0] + '.' + touchToPath[id].id, undefined, function() {
+          var tmp = drawSub.subscribe(touchToPath[id].id, undefined, function() {
             touchToSub[id] = tmp;
           });
         });
       });
     };
-
+    
+    discard = [];
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var id = ct.identifier + 1;
-        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, 1);
+        if (discard[id]) {
+          discard[id] = 0;
+          return;
+        }
+        discard[id] = 1;
+        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
         if (typeof touchToSub[id] !== 'undefined') {
           touchToSub[id].try(function(path) {
             path.X = touchToPath[id].X;
             path.Y = touchToPath[id].Y;
+            path.t = touchToPath[id].t;
           });
         }
       });
@@ -174,6 +185,7 @@ define(['clientUtil'], function(clientUtil) {
           touchToSub[id].try(function(path) {
             path.X = touchToPath[id].X;
             path.Y = touchToPath[id].Y;
+            path.t = touchToPath[id].t;
             path.strokeFinished = true;
           }, function() {
             touchToSub[id].unsubscribe();
@@ -250,18 +262,6 @@ define(['clientUtil'], function(clientUtil) {
               });
             }
           }, ['Clear']),
-          m('span.spacer1', [m.trust('&nbsp;')]),
-          m('button.btn.btn-default.btn-lg', {
-            'onclick': function() {
-              if (ctrl.map)
-                canvas.classList.remove('map');
-              else
-                canvas.classList.add('map');
-                
-              ctrl.map = !ctrl.map;
-            }
-          }, ['Show/hide map']),
-          m('span.spacer1', [m.trust('&nbsp;')]),
           m('span.spacer1', [m.trust('&nbsp;')]),
           m('span.input-group', [
             m('input[type=range].form-control.input-lg', {
