@@ -33,7 +33,7 @@ operations | params
     this.transactionIds = [];
     this.toSync.push(this);
     var that = this;
-    this.ws.addEventListener('message', function(event) {
+    this.ws.addEventListener('message', this.eventListener = function(event) {
       var envelope = JSON.parse(event.data);
       switch(envelope.channel) {
         case 'get-returned':
@@ -105,6 +105,7 @@ operations | params
   };
   
   STM.prototype.unsubscribe = function() {
+    this.ws.removeEventListener('message', this.eventListener);
     this.send('unsubscribe', {'id': Object.keys(this.subCallbacks)[0]});
   };
 
@@ -196,7 +197,7 @@ operations | params
   }
   
   function diffADebug(origin, comparand, callback) {
-    callback(diff(origin, comparand));
+    callback(diff(origin, comparand, false));
   };
   
   function diffA(origin, comparand, callback) {
@@ -210,9 +211,6 @@ operations | params
     props = props.filter(function(element, index, array) {
       return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
     }, {});
-    
-    if ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold))
-      callback({_op: 'm', om: origin, nm: comparand});
       
     var op = function(i) {
       if (i >= props.length) {
@@ -271,7 +269,7 @@ operations | params
   }
 
   // assert(isPOJS(origin) && isPOJS(comparand))
-  function diff(origin, comparand, notRoot) {
+  function diff(origin, comparand) {
     if (!isPOJS(origin) || !isPOJS(comparand))
       throw new Error('Attempting to diff a non-object');
     var delta = {}, props = [];
@@ -282,9 +280,6 @@ operations | params
     props = props.filter(function(element, index, array) {
       return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
     }, {});
-    
-    //if ((typeof notRoot !== 'undefined' || notRoot === true) && ((originProps.length > 0 && numSharedProps / originProps.length < sharedThreshold) || (comparandProps.length > 0 && numSharedProps / comparandProps.length < sharedThreshold)))
-    //  return {_op: 'm', om: origin, nm: comparand};
     
     if (typeof notRoot === 'undefined')
       notRoot = true;

@@ -194,15 +194,17 @@ define(['clientUtil'], function(clientUtil) {
       appRoot.subscribe('deviceState.' + params.device + '.version', newVersion);
     });
   };
-   var drawSub;
+  var drawSub;
   var version;
   var drawnByMe = {};
   
   function newVersion(vArray) {
-    paths = {};
-    clearScreen();
-    console.log(drawSub.basePath);
     drawSub.unsubscribe();
+    clearScreen();
+    drawnByMe = {};
+    touchToSub = {};
+    touchToPath = {};
+    paths = {};
     drawSub = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
   }
   
@@ -242,10 +244,9 @@ define(['clientUtil'], function(clientUtil) {
               document.body.classList.add('frozen');
               appRoot.try(function(root) {
                 root.deviceState[params.device].drawings[++root.deviceState[params.device].version[0]] = {};
-              }, function(state) {
+              }, function(root) {
                 document.body.classList.remove('frozen');
-                paths = {};
-                clearScreen();
+                newVersion(root.deviceState[params.device].version);
               });
             }
           }, ['Clear']),
