@@ -134,7 +134,7 @@ operations | params
         if (toSync.attempts.length === 0)
           return;
         else if (toSync.syncing || toSync.transactionIds.length > 0)
-          return console.log('x');
+          return;
         
         toSync.syncing = true;
         var origin = JSON.parse(JSON.stringify(toSync.state));
@@ -158,10 +158,7 @@ operations | params
            
           attempts[i].callback(comparand);
           var a = attempts[i];
-          console.time(1);
           diffADebug(origin, comparand, function(result) {
-          console.timeEnd(1);
-          console.log(result);
             if (typeof result === 'undefined')
               a.then(comparand);
             else {

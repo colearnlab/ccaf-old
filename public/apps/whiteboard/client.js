@@ -91,9 +91,11 @@ define(['clientUtil'], function(clientUtil) {
     parentElement.appendChild(controls);
 
     var mouse = 0;
+    var discardMouse = 0;
     canvas.onmousedown = function(e) {
       var id = 0;
       mouse = 1;
+      
 
       touchToPath[id] = PathFactory();
       drawnByMe[touchToPath[id].id] = true;
@@ -110,6 +112,13 @@ define(['clientUtil'], function(clientUtil) {
     canvas.onmousemove = function(e) {
       if (mouse === 0)
         return;
+        
+      if (discardMouse) {
+        discardMouse = 0;
+        return;
+      }
+      
+      discardMouse = 1;
 
       var id = 0;
         
@@ -126,7 +135,6 @@ define(['clientUtil'], function(clientUtil) {
     canvas.onmouseup = canvas.onmouseout = function(e) {
       if (mouse === 0)
         return;
-        
       mouse = 0;
       var id = 0;
       if (typeof touchToSub[id] !== 'undefined') {
@@ -138,6 +146,7 @@ define(['clientUtil'], function(clientUtil) {
         }, function() {
           touchToSub[id].unsubscribe();
           delete touchToSub[id];
+          delete touchToPath[id];
         });
       }
     }
@@ -152,6 +161,11 @@ define(['clientUtil'], function(clientUtil) {
            root[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
         }, function(root) {
           var tmp = drawSub.subscribe(touchToPath[id].id, undefined, function() {
+            tmp.try(function(path) {
+              path.X = touchToPath[id].X;
+              path.Y = touchToPath[id].Y;
+              path.t = touchToPath[id].t;
+            });
             touchToSub[id] = tmp;
           });
         });
@@ -178,7 +192,7 @@ define(['clientUtil'], function(clientUtil) {
       });
     };
 
-    canvas.ontouchend = canvas.ontouchleave = canvas.ontouchcancel = function(e) {
+    canvas.ontouchend = canvas.ontouchcancel = canvas.ontouchleave = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var id = ct.identifier + 1;
         if (typeof touchToSub[id] !== 'undefined') {
@@ -190,6 +204,7 @@ define(['clientUtil'], function(clientUtil) {
           }, function() {
             touchToSub[id].unsubscribe();
             delete touchToSub[id];
+            delete touchToPath[id];
           });
         }
       });
@@ -252,12 +267,12 @@ define(['clientUtil'], function(clientUtil) {
       return (
         m('div#controls.form-inline', [
           m('button.btn.btn-default.btn-lg', {
-            'onclick': function() {
-              document.body.classList.add('frozen');
+            'onclick': function(e) {
+              canvas.classList.add('frozen');
               appRoot.try(function(root) {
                 root.deviceState[params.device].drawings[++root.deviceState[params.device].version[0]] = {};
               }, function(root) {
-                document.body.classList.remove('frozen');
+                canvas.classList.remove('frozen');
                 newVersion(root.deviceState[params.device].version);
               });
             }
