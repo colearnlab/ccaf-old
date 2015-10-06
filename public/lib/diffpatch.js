@@ -21,7 +21,6 @@ operations | params
 */
 
 (function() {
-  var sharedThreshold = 0.5;
   var noop = function(){};
   function STM(ws, basePath) {
     this.ws = ws;
@@ -133,10 +132,9 @@ operations | params
       that.toSync.forEach(function(toSync) {
         if (toSync.attempts.length === 0)
           return;
-        else if (toSync.syncing || toSync.transactionIds.length > 0)
+        else if (toSync.transactionIds.length > 0)
           return;
-        
-        toSync.syncing = true;
+          
         var origin = JSON.parse(JSON.stringify(toSync.state));
         var comparand = JSON.parse(JSON.stringify(toSync.state));
         var tmp = [];
@@ -152,7 +150,6 @@ operations | params
               toSync.send('attempt', {id: ++transactionId, path: toSync.basePath, attempts: toSync.attempts});
               toSync.transactionIds.push(transactionId);
             }
-            toSync.syncing = false;
             return;
           }
            
@@ -194,74 +191,6 @@ operations | params
   function diffADebug(origin, comparand, callback) {
     callback(diff(origin, comparand, false));
   };
-  
-  function diffA(origin, comparand, callback) {
-    if (!isPOJS(origin) || !isPOJS(comparand))
-      throw new Error('Attempting to diff a non-object');
-    var delta = {}, props = [];
-    
-    var originProps = Object.keys(origin), comparandProps = Object.keys(comparand), numSharedProps = 0;
-    [].push.apply(props, originProps);
-    [].push.apply(props, comparandProps);
-    props = props.filter(function(element, index, array) {
-      return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
-    }, {});
-      
-    var op = function(i) {
-      if (i >= props.length) {
-        if (Object.keys(delta).length > 0)
-          callback(delta);
-        else
-          callback();
-        return;
-      };
-      
-      var fPropInOrigin, fPropInComparand, fUndefinedInOrigin, fUndefinedInComparand, fTypesMatch, fObjInOrigin, fObjInComparand;
-      var subDelta;
-      
-      fPropInOrigin = props[i] in origin;
-      fPropInComparand = props[i] in comparand;
-      fUndefinedInOrigin = typeof origin[props[i]] === 'undefined';
-      fUndefinedInComparand = typeof comparand[props[i]] === 'undefined';
-      fTypesMatch = typeof comparand[props[i]] === typeof origin[props[i]];
-      fObjInOrigin = isPOJS(origin[props[i]]);
-      fObjInComparand = isPOJS(comparand[props[i]]);
-      
-      var res;
-      if (fPropInOrigin && fUndefinedInOrigin && !fUndefinedInComparand)
-        res = {_op: 'mu', nmu: comparand[props[i]]};
-      else if (fPropInComparand && (!fUndefinedInOrigin || !fPropInOrigin) && fUndefinedInComparand)
-        res = {_op: 'su', osu: origin[props[i]]};
-      else if (!fPropInOrigin && fPropInComparand )
-        res = {_op: 's', ns: comparand[props[i]]};
-      else if (fPropInOrigin && !fPropInComparand)
-        res = {_op: 'd', od: origin[props[i]]}
-      else if (fUndefinedInOrigin && !fPropInComparand)
-        res = {_op: 'du'};
-      else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && origin[props[i]] !== comparand[props[i]]))
-        res = {_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
-        
-      if (typeof res !== 'undefined') {
-        delta[props[i]] = res;
-        op(++i);
-      } else if (fObjInOrigin && fObjInComparand) {
-        var j = i;
-        setZeroTimeout(function() {
-          var k = j;
-          diffA(origin[props[j]], comparand[props[j]], function(result) {
-            if (typeof result !== 'undefined')
-              delta[props[k]] = result;
-          
-            op(++k);  
-          });
-        });
-      } else {
-        op(++i);
-      }
-    };
-    
-    op(0);
-  }
 
   // assert(isPOJS(origin) && isPOJS(comparand))
   function diff(origin, comparand) {
@@ -269,15 +198,12 @@ operations | params
       throw new Error('Attempting to diff a non-object');
     var delta = {}, props = [];
     
-    var originProps = Object.keys(origin), comparandProps = Object.keys(comparand), numSharedProps = 0;
+    var originProps = Object.keys(origin), comparandProps = Object.keys(comparand);
     [].push.apply(props, originProps);
     [].push.apply(props, comparandProps);
     props = props.filter(function(element, index, array) {
-      return this.hasOwnProperty(element) ? (numSharedProps++, false) : (this[element] = true);
+      return this.hasOwnProperty(element) ? false : this[element] = true;
     }, {});
-    
-    if (typeof notRoot === 'undefined')
-      notRoot = true;
 
     for (var i = 0; i < props.length; i++) {
       fPropInOrigin = props[i] in origin;
@@ -289,18 +215,20 @@ operations | params
       fObjInComparand = isPOJS(comparand[props[i]]);
       
       if (fPropInOrigin && fUndefinedInOrigin && !fUndefinedInComparand)
-        delta[props[i]] = {_op: 'mu', nmu: comparand[props[i]]};
-      else if (fPropInComparand && (!fUndefinedInOrigin || !fPropInOrigin) && fUndefinedInComparand)
-        delta[props[i]] = {_op: 'su', osu: origin[props[i]]};
+        delta[props[i]] = [1, 1, comparand[props[i]]]; //{_op: 'mu', nmu: comparand[props[i]]};
+      else if (fPropInComparand && (!fUndefinedInOrigin && fPropInOrigin) && fUndefinedInComparand)
+        delta[props[i]] = [1, 2, null, origin[props[i]]]; //{_op: 'su', osu: origin[props[i]]};
+      else if (!fPropInOrigin && fPropInComparand && fUndefinedInComparand)
+        delta[props[i]] = [0, 2];
       else if (!fPropInOrigin && fPropInComparand )
-        delta[props[i]] = {_op: 's', ns: comparand[props[i]]};
+        delta[props[i]] = [0, 0, comparand[props[i]]]; //{_op: 's', ns: comparand[props[i]]};
       else if (fPropInOrigin && !fPropInComparand)
-        delta[props[i]] = {_op: 'd', od: origin[props[i]]}
+        delta[props[i]] = [2, 0, null, origin[props[i]]]; //{_op: 'd', od: origin[props[i]]}
       else if (fUndefinedInOrigin && !fPropInComparand)
-        delta[props[i]] = {_op: 'du'};
+        delta[props[i]] = [2, 1]; //{_op: 'du'};
       else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && origin[props[i]] !== comparand[props[i]]))
-        delta[props[i]] = {_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
-      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]], notRoot)) !== 'undefined')
+        delta[props[i]] = [1, 0, comparand[props[i]], origin[props[i]]]; //{_op: 'm', om: origin[props[i]], nm: comparand[props[i]]};
+      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(origin[props[i]], comparand[props[i]])) !== 'undefined')
         delta[props[i]] = subDelta;
     }
 
@@ -312,7 +240,7 @@ operations | params
     if (typeof delta === 'undefined')
       return true;
     
-    if ('_op' in delta) {
+    if (delta instanceof Array) {
       target = {0: target};
       delta = {0: delta};
     }
@@ -321,20 +249,17 @@ operations | params
       return false;
       
     Object.keys(delta).forEach(function(prop) {
-      if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
-        patch(target[prop], delta[prop]);
+      if (!(delta[prop] instanceof Array))
+        patch(target[prop], delta[prop], true);
       else {
-        switch(delta[prop]._op) {
-          case 's':  target[prop] = delta[prop].ns;   break;
-          case 'm':  target[prop] = delta[prop].nm;   break;
-          case 'su': target[prop] = undefined;        break;
-          case 'mu': target[prop] = delta[prop].nmu;  break;
-          case 'd':
-          case 'du':
+        switch(delta[prop][0]) {
+          case 0:  
+          case 1:  target[prop] = delta[prop][1] !== 1 ? delta[prop][2] : undefined;   break;
+          case 2:
             if (target instanceof Array)
               target.splice(prop, 1)
             else
-              delete target[prop];                    break;
+              delete target[prop];
         }
       }
     });
@@ -343,43 +268,20 @@ operations | params
   }
 
   function reverse(delta) {
-    var toReturn = {};
-    Object.keys(delta).forEach(function(prop) {
-      try {
-      if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
-        toReturn[prop] = reverse(delta[prop]);
-      } catch (e){ debugger; }
-      switch(delta[prop]._op) {
-        case 's':  toReturn[prop] = {_op: 'd',   od:   delta[prop].ns};                      break;
-        case 'm':  toReturn[prop] = {_op: 'm',   om:   delta[prop].nm, nm: delta[prop].om};  break;
-        case 'd':  toReturn[prop] = {_op: 's',   ns:   delta[prop].od};                      break;
-        case 'su':
-          if (typeof delta[prop].osu !== 'undefined')
-            toReturn[prop] =        {_op: 'mu',  nmu: delta[prop].osu};
-          else
-            toReturn[prop] =        {_op: 'du'};                                             break;
-        case 'mu': toReturn[prop] = {_op: 'su',  osu: delta[prop].nmu};                      break;
-        case 'du': toReturn[prop] = {_op: 'su'};                                             break;
-      } 
-    });
-    
-    return toReturn;
+
   }
 
   function check(target, delta) {
     if (typeof target === 'undefined' || typeof delta === 'undefined')
       return typeof target === 'undefined' && typeof delta === 'undefined';
     return Object.keys(delta).every(function(prop) {
-      if (isPOJS(delta[prop]) && !('_op' in delta[prop]))
+      if (!(delta[prop] instanceof Array))
         return check(target[prop], delta[prop]);
       try {
-        switch(delta[prop]._op) {
-          case 's':  return !(prop in target);
-          case 'm':  return deepequals(target[prop], delta[prop].om);
-          case 'd':  return deepequals(target[prop], delta[prop].od);
-          case 'su': return !(prop in target) || deepEquals(target[prop], delta[prop].osu);
-          case 'mu':
-          case 'du': return (prop in target) && typeof target[prop] === 'undefined';
+        switch(delta[prop][0]) {
+          case 0: return !(prop in target);
+          case 1: 
+          case 2: return deepequals(target[prop], delta[prop][3]);
         }
       } catch (e) {
         return false;
@@ -416,6 +318,7 @@ operations | params
     return true;
   }
   
+  // cite
   var setZeroTimeout;
   (function() {
     if (typeof window === 'undefined')
@@ -448,9 +351,9 @@ operations | params
   })();
 
   if (typeof define !== 'undefined')
-    define({'STM': STM, 'diff': diff, 'diffA': diffA,'patch': patch, 'reverse': reverse});
+    define({'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse});
   else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-    module.exports = {'STM': STM, 'diff': diff, 'diffA': diffA, 'patch': patch, 'reverse': reverse};
+    module.exports = {'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse};
   else
     window.STM = STM;
 }());

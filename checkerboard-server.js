@@ -27,6 +27,7 @@ module.exports.Server = function(port, inputState, opts) {
   });
   
   this.on('attempt', function(conn, message) {
+    console.time(1);
     var curState = getByPath(that.state, message.path);
     var savedState = JSON.parse(JSON.stringify(curState));
     
@@ -56,6 +57,7 @@ module.exports.Server = function(port, inputState, opts) {
           
       });
     });
+    console.timeEnd(1);
   });
 
   this.websocketServer.on('connection', function(conn) {

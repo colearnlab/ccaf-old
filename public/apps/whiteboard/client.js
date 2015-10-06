@@ -94,7 +94,7 @@ define(['clientUtil'], function(clientUtil) {
     canvas.onmousedown = function(e) {
       var id = 0;
       mouse = 1;
-      var path = path = PathFactory();
+      var path = touchToPath[id] = PathFactory();
       drawnByMe[path.id] = true;
       addToPath(path, e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
       drawSub.try(function(root) {
@@ -128,6 +128,8 @@ define(['clientUtil'], function(clientUtil) {
       mouse = 0;
       var id = 0;
       var path = touchToPath[id];
+      if (typeof path === 'undefined')
+        return;
       if (typeof touchToSub[id] !== 'undefined') {
         touchToSub[id].try(function(_path) {
           _path.X = path.X;
@@ -181,6 +183,8 @@ define(['clientUtil'], function(clientUtil) {
       [].forEach.call(e.changedTouches, function(ct) {
         var id = ct.identifier + 1;
         var path = touchToPath[id];
+        if (typeof path === 'undefined')
+          return;
         if (typeof touchToSub[id] !== 'undefined') {
           touchToSub[id].try(function(_path) {
             _path.X = path.X;
