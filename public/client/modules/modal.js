@@ -1,6 +1,4 @@
-define('modal', ['mithril', 'clientUtil'], function(m, clientUtil) {
-  var exports = {};
-  
+define('modal', ['exports', 'mithril', 'clientUtil'], function(exports, m, clientUtil) {  
   var modal = {
     'controller': function(args) {
       return {
@@ -12,13 +10,6 @@ define('modal', ['mithril', 'clientUtil'], function(m, clientUtil) {
         return m('div#modal', {
           'onclick': function(e) {
             ctrl.display(false);
-          },
-          'config': function(el) {
-            setTimeout(function() {
-              ctrl.display(false);
-              if (el.parentNode !== null)
-                el.parentNode.removeChild(el);
-            }, 5000);
           }
         }, [
           m('span', m.trust(args.text)),
@@ -41,6 +32,4 @@ define('modal', ['mithril', 'clientUtil'], function(m, clientUtil) {
     
     m.mount(container, m.component(modal, {'text': text}));
   };
-  
-  return exports;
 });

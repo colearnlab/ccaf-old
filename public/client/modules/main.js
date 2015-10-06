@@ -12,7 +12,7 @@ module = null;
 
 define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu', 'cookies', 'modal'], function(exports, checkerboard, m, clientUtil, selector, cornerMenu, cookies, modal) {  
   var ws = new WebSocket('ws://' + window.location.hostname + ':' + (clientUtil.parameter('port') || '1808'));
-  var cb;
+  var cb, root;
     
   if (clientUtil.parameter('electron')) {
     require('ipc').send('client-connected');
@@ -57,6 +57,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     classroom = undefined;
     device = undefined;
   };
+  
   var setIdentity = exports.setIdentity = function(_classroom, _device) {
     selected = true;
     classroom = _classroom;

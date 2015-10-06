@@ -1,7 +1,7 @@
 var WebSocket = require('./node_modules/ws/index.js');
 var events = require('events');
 var util = require('util');
-var diffpatch = require('./public/lib/diffpatch.js'), diff = diffpatch.diff, diffA = diffpatch.diffA, patch = diffpatch.patch;
+var diffpatch = require('./public/lib/diffpatch.js'), diff = diffpatch.diff, patch = diffpatch.patch;
 module.exports.Server = function(port, inputState, opts) {
   if (typeof opts === 'undefined')
     opts = {};
@@ -31,10 +31,7 @@ module.exports.Server = function(port, inputState, opts) {
     var savedState = JSON.parse(JSON.stringify(curState));
     
     var successes = message.attempts.filter(function(attempt) {
-      if (patch(getByPath(that.state, message.path), attempt.delta)) {
-        return true;
-      }
-      return false;
+      return patch(getByPath(that.state, message.path), attempt.delta);
     }).map(function(attempt) {
       return attempt.id;
     });
@@ -92,16 +89,6 @@ module.exports.Server = function(port, inputState, opts) {
 
 util.inherits(module.exports.Server, events.EventEmitter);
 
-function isPOJS(prop) {
-  return !(
-    prop instanceof Date ||
-    prop instanceof RegExp ||
-    prop instanceof String ||
-    prop instanceof Number) &&
-    typeof prop === 'object' &&
-    prop !== null;
-}
-
 function ConnWrapper(conn, opts) {
   this.conn = conn;
   this.queue = [];
@@ -128,7 +115,18 @@ ConnWrapper.prototype.sendQueue = function() {
   });
   this.queue = [];
 };
- 
+
+function isPOJS(prop) {
+  return !(
+    prop instanceof Date ||
+    prop instanceof RegExp ||
+    prop instanceof String ||
+    prop instanceof Number) &&
+    typeof prop === 'object' &&
+    prop !== null;
+}
+
+//todo: cite source
 function getByPath(obj, keyPath){ 
  
     var keys, keyLen, i=0, key;

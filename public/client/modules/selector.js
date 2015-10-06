@@ -1,6 +1,4 @@
-define(['./main'], function(main) {
-  var exports = {};
-    
+define(['exports', './main'], function(exports, main) {    
   exports.controller = function() {
     var classrooms = m.prop({});
     m.startComputation();
@@ -54,6 +52,4 @@ define(['./main'], function(main) {
       );
     }
   };
-  
-  return exports;
 });

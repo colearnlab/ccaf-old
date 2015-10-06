@@ -1,6 +1,5 @@
-define(['clientUtil', 'mithril', 'interact', './main'], function(clientUtil, m, interact, main) {
+define(['exports', 'clientUtil', 'mithril', 'interact', './main'], function(exports, clientUtil, m, interact, main) {
   var timeout, toggled = false;
-  var exports = {};
   
   exports.view = function() {
     return m('span', [
@@ -125,6 +124,4 @@ define(['clientUtil', 'mithril', 'interact', './main'], function(clientUtil, m, 
         e.target.classList.remove('activated');
       }
     });
-    
-  return exports;
 });

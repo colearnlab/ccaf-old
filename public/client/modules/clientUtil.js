@@ -1,6 +1,4 @@
-define('clientUtil', function() {
-  var exports = {};
-  
+define('clientUtil', ['exports'], function(exports) { 
   exports.css = function(url, persist) {
     var links = document.getElementsByTagName('link');
     for (var i = 0; i < links.length; i++)
@@ -44,6 +42,4 @@ define('clientUtil', function() {
    
       return obj;
   };
-  
-  return exports;
 });
