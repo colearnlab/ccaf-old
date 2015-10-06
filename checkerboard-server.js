@@ -8,9 +8,12 @@ module.exports.Server = function(port, inputState, opts) {
 
   this.websocketServer = new WebSocket.Server({'port': port});
   this.state = inputState || {};
+ 
+ 
+  var conns = []; 
+  var that = this;
       
-  var tfn;
-  this.on('get', tfn = function(conn, message) {
+  this.on('get', function(conn, message) {
     var data = getByPath(this.state, message.path);
     conn.sendObj('get-returned', {'data': getByPath(this.state, message.path), 'id': message.id});
   });
@@ -23,64 +26,41 @@ module.exports.Server = function(port, inputState, opts) {
     delete conn.subs[message.id];
   });
   
-  var that = this;
   this.on('attempt', function(conn, message) {
-    console.time('attempt');
-    var savedState = JSON.parse(JSON.stringify(that.state));
+    var curState = getByPath(that.state, message.path);
+    var savedState = JSON.parse(JSON.stringify(curState));
+    
     var successes = message.attempts.filter(function(attempt) {
       if (patch(getByPath(that.state, message.path), attempt.delta)) {
         return true;
       }
-      patch(getByPath(that.state, message.path), attempt.delta)
       return false;
     }).map(function(attempt) {
       return attempt.id;
     });
-    var delta = diff(getByPath(savedState, message.path), getByPath(that.state, message.path), false);
+    
+    var delta = diff(savedState, curState);
     var wrapped = wrap(delta, message.path);
     conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes, 'delta': getByPath(wrapped, message.path)});
-    var cache = {};
-
+    
+    var cache = {}, subdelta;
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
         if (otherConn === conn && otherConn.subs[id] === message.path)
           return;
-        var subdelta;
+        
         if (otherConn.subs[id] in cache)
           subdelta = cache[otherConn.subs[id]];
-        else {
-          subdelta = getByPath(wrapped, otherConn.subs[id]);
-          cache[otherConn.subs[id]] = subdelta;
-        }
-        (function(subdelta) {        
-          if (subdelta !== null && typeof subdelta !== 'undefined') {
-            otherConn.enqueue('update-state', {'id': id, 'delta': subdelta});
-          }
-        }(subdelta));
+        else
+          subdelta = cache[otherConn.subs[id]] = getByPath(wrapped, otherConn.subs[id]);
+  
+        if (subdelta !== null && typeof subdelta !== 'undefined')
+          otherConn.enqueue('update-state', {'id': id, 'delta': subdelta});
+          
       });
     });
-        console.timeEnd('attempt');
-
   });
-  
-  function wrap(obj, path, root) {
-    if (typeof root === 'undefined')
-      root = {};
-    
-    var c = path.split('.');
-    if (c.length === 1) {
-      root[c[0]] = obj;
-      return;
-    }
-    
-    root[c[0]] = {};
-    wrap(obj, c.splice(1).join('.'), root[c[0]]);
-    
-    return root;
-  };
 
-  var that = this;
-  var conns = [];
   this.websocketServer.on('connection', function(conn) {
     var wrapped = new ConnWrapper(conn, opts);
     conns.push(wrapped);
@@ -170,3 +150,19 @@ function getByPath(obj, keyPath){
  
     return obj;
 }
+
+function wrap(obj, path, root) {
+  if (typeof root === 'undefined')
+    root = {};
+
+  var c = typeof path === 'string' ? path.split('.') : path;
+  if (c.length === 1) {
+    root[c[0]] = obj;
+    return;
+  }
+  
+  root[c[0]] = {};
+  wrap(obj, c.splice(1), root[c[0]]);
+  
+  return root;
+};

@@ -99,7 +99,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
             classrooms[classroom].appRoot[appData.path] = {};
         },
         function() {
-          classrooms.sync(5);
+          classrooms.sync(15);
           appRoot = classrooms.subscribe(classroom + '.appRoot.' + appData.path, undefined, function() {
             app.startApp(appRoot, document.getElementById('app'),
               {'classroom': classroom, 'device': device});

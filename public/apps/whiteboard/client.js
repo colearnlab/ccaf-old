@@ -91,19 +91,16 @@ define(['clientUtil'], function(clientUtil) {
     parentElement.appendChild(controls);
 
     var mouse = 0;
-    var discardMouse = 0;
     canvas.onmousedown = function(e) {
       var id = 0;
       mouse = 1;
-      
-
-      touchToPath[id] = PathFactory();
-      drawnByMe[touchToPath[id].id] = true;
-      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
+      var path = path = PathFactory();
+      drawnByMe[path.id] = true;
+      addToPath(path, e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
       drawSub.try(function(root) {
-         root[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+         root[path.id] = JSON.parse(JSON.stringify(path));
       }, function(root) {
-        var tmp = drawSub.subscribe(touchToPath[id].id, undefined, function() {
+        var tmp = drawSub.subscribe(path.id, undefined, function() {
           touchToSub[id] = tmp;
         });
       }); 
@@ -112,22 +109,15 @@ define(['clientUtil'], function(clientUtil) {
     canvas.onmousemove = function(e) {
       if (mouse === 0)
         return;
-        
-      if (discardMouse) {
-        discardMouse = 0;
-        return;
-      }
-      
-      discardMouse = 1;
 
       var id = 0;
-        
-      addToPath(touchToPath[id], e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
+      var path = touchToPath[id];
+      addToPath(path, e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
       if (typeof touchToSub[id] !== 'undefined') {
-        touchToSub[id].try(function(path) {
-          path.X = touchToPath[id].X;
-          path.Y = touchToPath[id].Y;
-          path.t = touchToPath[id].t;
+        touchToSub[id].try(function(_path) {
+          _path.X = path.X;
+          _path.Y = path.Y;
+          _path.t = path.t;
         });
       }
     }
@@ -137,16 +127,16 @@ define(['clientUtil'], function(clientUtil) {
         return;
       mouse = 0;
       var id = 0;
+      var path = touchToPath[id];
       if (typeof touchToSub[id] !== 'undefined') {
-        touchToSub[id].try(function(path) {
-          path.X = touchToPath[id].X;
-          path.Y = touchToPath[id].Y;
-          path.t = touchToPath[id].t;
-          path.strokeFinished = true;
+        touchToSub[id].try(function(_path) {
+          _path.X = path.X;
+          _path.Y = path.Y;
+          _path.t = path.t;
+          _path.strokeFinished = true;
         }, function() {
           touchToSub[id].unsubscribe();
           delete touchToSub[id];
-          delete touchToPath[id];
         });
       }
     }
@@ -154,39 +144,34 @@ define(['clientUtil'], function(clientUtil) {
     canvas.ontouchstart = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var id = ct.identifier + 1;
-        touchToPath[id] = PathFactory();
-        drawnByMe[touchToPath[id].id] = true;
-        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
+        var path = touchToPath[id] = PathFactory();
+        drawnByMe[path.id] = true;
+        addToPath(path, ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
         drawSub.try(function(root) {
-           root[touchToPath[id].id] = JSON.parse(JSON.stringify(touchToPath[id]));
+           root[path.id] = JSON.parse(JSON.stringify(path));
         }, function(root) {
-          var tmp = drawSub.subscribe(touchToPath[id].id, undefined, function() {
-            tmp.try(function(path) {
-              path.X = touchToPath[id].X;
-              path.Y = touchToPath[id].Y;
-              path.t = touchToPath[id].t;
+          var tmp = drawSub.subscribe(path.id, undefined, function() {
+            tmp.try(function(_path) {
+              _path.X = path.X;
+              _path.Y = path.Y;
+              _path.t = path.t;
             });
             touchToSub[id] = tmp;
           });
         });
       });
     };
-    
-    discard = [];
+ 
     canvas.ontouchmove = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var id = ct.identifier + 1;
-        if (discard[id]) {
-          discard[id] = 0;
-          return;
-        }
-        discard[id] = 1;
-        addToPath(touchToPath[id], ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
+        var path = touchToPath[id];
+        addToPath(path, ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
         if (typeof touchToSub[id] !== 'undefined') {
-          touchToSub[id].try(function(path) {
-            path.X = touchToPath[id].X;
-            path.Y = touchToPath[id].Y;
-            path.t = touchToPath[id].t;
+          touchToSub[id].try(function(_path) {
+            _path.X = path.X;
+            _path.Y = path.Y;
+            _path.t = path.t;
           });
         }
       });
@@ -195,12 +180,13 @@ define(['clientUtil'], function(clientUtil) {
     canvas.ontouchend = canvas.ontouchcancel = canvas.ontouchleave = function(e) {
       [].forEach.call(e.changedTouches, function(ct) {
         var id = ct.identifier + 1;
+        var path = touchToPath[id];
         if (typeof touchToSub[id] !== 'undefined') {
-          touchToSub[id].try(function(path) {
-            path.X = touchToPath[id].X;
-            path.Y = touchToPath[id].Y;
-            path.t = touchToPath[id].t;
-            path.strokeFinished = true;
+          touchToSub[id].try(function(_path) {
+            _path.X = path.X;
+            _path.Y = path.Y;
+            _path.t = path.t;
+            _path.strokeFinished = true;
           }, function() {
             touchToSub[id].unsubscribe();
             delete touchToSub[id];
