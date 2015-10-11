@@ -3,6 +3,7 @@ define(['clientUtil'], function(clientUtil) {
   var appRoot, parentElement, params;
 
   var canvas, ctx, touchToPath, touchToSub, paths, version, pen, lastPath = [], version;
+  var canvasHeight = 5000, canvasTop = 0;
   
   function PathFactory(props) {
     var obj = {};
@@ -35,7 +36,7 @@ define(['clientUtil'], function(clientUtil) {
     var loc = Object.keys(path.X).length;
     
     path.X[loc] = parseInt(x);
-    path.Y[loc] = parseInt(y);
+    path.Y[loc] = parseInt(y)+ canvasTop;
     path.t[loc] = t;
     
     drawPath(path);
@@ -74,7 +75,8 @@ define(['clientUtil'], function(clientUtil) {
 
     canvas = document.createElement('canvas');
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = canvasHeight;
+    canvas.style.height = canvasHeight + 'px';
     ctx = canvas.getContext('2d');
 
     touchToPath = {};
@@ -256,6 +258,19 @@ define(['clientUtil'], function(clientUtil) {
     'view': function(ctrl) {
       return (
         m('div#controls.form-inline', [
+          m('#slidercontainer', [
+            m('input#slider[type=range]', {
+              min: 0,
+              max: canvasHeight - window.innerHeight,
+              value: canvasHeight - window.innerHeight,
+              config: function(el) {
+                el.addEventListener('input', function(e) {
+                  canvasTop = (canvasHeight - window.innerHeight - e.target.value);
+                  canvas.style.transform = 'translate(0px,-' + canvasTop + 'px)';
+                });
+              }
+            })
+          ]),
           m('button.btn.btn-default.btn-lg', {
             'onclick': function(e) {
               canvas.classList.add('frozen');
