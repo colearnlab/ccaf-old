@@ -50,6 +50,8 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
   var selected = false, classroom, device, classrooms;
   var resetIdentity = exports.resetIdentity = function() {
     clearApp();
+    if (typeof appRoot !== 'undefined')
+      appRoot.unsubscribe();
     selected = false;
     app.unsubscribe();
     cookies.removeItem('classroom');
@@ -86,7 +88,7 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
     appData = undefined;
   };
   
-  var appData, appElement, appRoot
+  var appData, appElement, appRoot;
   var appChange = function(_appData) {
     if (typeof appData !== 'undefined' && _appData.path === appData.path)
       return;
@@ -100,7 +102,6 @@ define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selecto
             classrooms[classroom].appRoot[appData.path] = {};
         },
         function() {
-          classrooms.sync(20);
           appRoot = classrooms.subscribe(classroom + '.appRoot.' + appData.path, undefined, function() {
             app.startApp(appRoot, document.getElementById('app'),
               {'classroom': classroom, 'device': device});

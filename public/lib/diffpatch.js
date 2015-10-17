@@ -30,6 +30,7 @@ operations | params
     this.subCallbacks = {};
     this.attempts = [];
     this.transactionIds = [];
+    this.childrenSubs = [];
     this.toSync.push(this);
     var that = this;
     this.ws.addEventListener('message', this.eventListener = function(event) {
@@ -48,6 +49,7 @@ operations | params
           patch(that.state, envelope.message.delta);
           that.attempts = that.attempts.filter(function(attempt) {
             if (envelope.message.successes.indexOf(attempt.id) >= 0) {
+              patch(that.state, attempt.delta);
               attempt.then(that.state);
               return false;
             } else {
@@ -58,7 +60,9 @@ operations | params
           break;
         case 'update-state':
           if (envelope.message.id in that.subCallbacks) {
-            patch(that.state, envelope.message.delta);
+            envelope.message.deltas.forEach(function(delta) {
+              patch(that.state, delta);
+            });
             that.subCallbacks[envelope.message.id](that.state);
           }
           break;
@@ -100,10 +104,15 @@ operations | params
       init(toReturn.state);
     });
     
+    this.childrenSubs.push(toReturn);
+    
     return toReturn;
   };
   
   STM.prototype.unsubscribe = function() {
+    this.childrenSubs.forEach(function(sub) {
+      sub.unsubscribe();
+    });
     this.ws.removeEventListener('message', this.eventListener);
     this.send('unsubscribe', {'id': Object.keys(this.subCallbacks)[0]});
   };
@@ -162,6 +171,7 @@ operations | params
               a.delta = result;
               a.id = ++transactionId;
               patch(origin, result);
+              patch(that.state, result);
               tmp.push(a);
             }
             
@@ -211,8 +221,8 @@ operations | params
       fUndefinedInOrigin = typeof origin[props[i]] === 'undefined';
       fUndefinedInComparand = typeof comparand[props[i]] === 'undefined';
       fTypesMatch = typeof comparand[props[i]] === typeof origin[props[i]];
-      fObjInOrigin = isPOJS(origin[props[i]]);
-      fObjInComparand = isPOJS(comparand[props[i]]);
+      fObjInOrigin = fPropInOrigin && !fUndefinedInOrigin && isPOJS(origin[props[i]]);
+      fObjInComparand = fPropInComparand && !fUndefinedInComparand && isPOJS(comparand[props[i]]);
       
       if (fPropInOrigin && fUndefinedInOrigin && !fUndefinedInComparand)
         delta[props[i]] = [1, 1, comparand[props[i]]]; //{_op: 'mu', nmu: comparand[props[i]]};
@@ -267,10 +277,6 @@ operations | params
     return true;
   }
 
-  function reverse(delta) {
-
-  }
-
   function check(target, delta) {
     if (typeof target === 'undefined' || typeof delta === 'undefined')
       return typeof target === 'undefined' && typeof delta === 'undefined';
@@ -297,6 +303,36 @@ operations | params
       obj instanceof Number) &&
       typeof obj === 'object' &&
       obj !== null;
+  }
+  
+  function mergeTwo(a, b, retainOrig) {
+    var toReturn = {};
+    sparseCopy(a, toReturn, retainOrig);
+    sparseCopy(b, toReturn, true);
+    return toReturn;
+  }
+  
+  function sparseCopy(source, destination, retainOrig) {
+    Object.keys(source).forEach(function(key) {
+      var fPatchInSource = source[key] instanceof Array;
+      var fObjInSource = !fPatchInSource;
+      var fExistsInDestination = key in destination && typeof destination[key] !== 'undefined';
+      var fPatchInDestination = destination[key] instanceof Array;
+      var fObjInDestination = fExistsInDestination && !fPatchInDestination;
+      
+      if (!fExistsInDestination)
+        destination[key] = source[key];
+      else if (fPatchInSource && fPatchInDestination) {
+        for (var i = 0; i < (retainOrgin ? 3 : 4); i++)
+          destination[key][i] = source[key][i];
+      }
+      else if (fObjInSource && fObjInDestination)
+        sparseCopy(source[key], destination[key], retainOrig);
+      else if (fObjInSource && fPatchInDestination) {
+        
+      }
+        
+    });
   }
 
   function deepequals(origin, comparand, props) {
@@ -351,9 +387,9 @@ operations | params
   })();
 
   if (typeof define !== 'undefined')
-    define({'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse});
+    define({'STM': STM, 'diff': diff, 'patch': patch});
   else if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-    module.exports = {'STM': STM, 'diff': diff, 'patch': patch, 'reverse': reverse};
+    module.exports = {'STM': STM, 'diff': diff, 'patch': patch};
   else
     window.STM = STM;
 }());

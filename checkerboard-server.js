@@ -8,6 +8,7 @@ module.exports.Server = function(port, inputState, opts) {
 
   this.websocketServer = new WebSocket.Server({'port': port});
   this.state = inputState || {};
+  var _savedState = JSON.parse(JSON.stringify(this.state));
  
  
   var conns = []; 
@@ -29,19 +30,17 @@ module.exports.Server = function(port, inputState, opts) {
   this.on('attempt', function(conn, message) {
     console.time(1);
     var curState = getByPath(that.state, message.path);
-    var savedState = JSON.parse(JSON.stringify(curState));
-    
     var successes = message.attempts.filter(function(attempt) {
-      return patch(getByPath(that.state, message.path), attempt.delta);
-    }).map(function(attempt) {
-      return attempt.id;
+      if (patch(curState, attempt.delta)) {
+        attempt.delta = wrap(attempt.delta, message.path);
+        return true;
+      }
+      return false;
     });
     
-    var delta = diff(savedState, curState);
-    var wrapped = wrap(delta, message.path);
-    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes, 'delta': getByPath(wrapped, message.path)});
-    
+    conn.sendObj('attempt-returned', {'id': message.id, 'successes': successes.map(function(attempt) { return attempt.id; })});
     var cache = {}, subdelta;
+    
     conns.forEach(function(otherConn) {
       Object.keys(otherConn.subs).forEach(function(id) {
         if (otherConn === conn && otherConn.subs[id] === message.path)
@@ -50,10 +49,12 @@ module.exports.Server = function(port, inputState, opts) {
         if (otherConn.subs[id] in cache)
           subdelta = cache[otherConn.subs[id]];
         else
-          subdelta = cache[otherConn.subs[id]] = getByPath(wrapped, otherConn.subs[id]);
+          subdelta = cache[otherConn.subs[id]] = successes.map(function(attempt) {
+            return getByPath(attempt.delta, otherConn.subs[id]);
+          }).filter(function(delta) { return delta != null; });
   
-        if (subdelta !== null && typeof subdelta !== 'undefined')
-          otherConn.enqueue('update-state', {'id': id, 'delta': subdelta});
+        if (subdelta.length > 0)
+          otherConn.enqueue('update-state', {'id': id, 'deltas': subdelta});
           
       });
     });
