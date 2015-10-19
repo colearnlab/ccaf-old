@@ -139,7 +139,8 @@ define(['clientUtil'], function(clientUtil) {
           _path.t = path.t;
           _path.strokeFinished = true;
         }, function() {
-          touchToSub[id].unsubscribe();
+          if ('unsubscribe' in touchToSub[id])
+            touchToSub[id].unsubscribe();
           delete touchToSub[id];
         });
       }
@@ -194,7 +195,8 @@ define(['clientUtil'], function(clientUtil) {
             _path.t = path.t;
             _path.strokeFinished = true;
           }, function() {
-            touchToSub[id].unsubscribe();
+            if ('unsubscribe' in touchToSub[id])
+              touchToSub[id].unsubscribe();
             delete touchToSub[id];
             delete touchToPath[id];
           });

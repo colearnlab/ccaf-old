@@ -22,6 +22,8 @@ operations | params
 
 (function() {
   var noop = function(){};
+  var worker = null;
+    
   function STM(ws, basePath) {
     this.ws = ws;
     this.basePath = basePath;
@@ -135,58 +137,64 @@ operations | params
   
   STM.prototype.toSync = [];
   var syncInterval = null;
-  STM.prototype.sync = function(interval) {
-    var that = this;
-    var op = function() {
-      that.toSync.forEach(function(toSync) {
-        if (toSync.attempts.length === 0)
-          return;
-        else if (toSync.transactionIds.length > 0)
-          return;
-          
-        var origin = JSON.parse(JSON.stringify(toSync.state));
-        var comparand = JSON.parse(JSON.stringify(toSync.state));
-        var tmp = [];
-        var attempts = [];
-        for (var k = 0; k < toSync.attempts.length; k++)
-          attempts[k] = toSync.attempts[k];
+  var op = function(that) {
+    var l = 0;
+    
+    var outerLoop = function(toSync) {
+      if (typeof toSync === 'undefined')
+        return;
+      else if (toSync.attempts.length === 0 || toSync.transactionIds.length > 0 || !toSync.state) {
+        outerLoop(that.toSync[++l]);
+        return;
+      }
+                
+      var origin = JSON.parse(JSON.stringify(toSync.state));
+      var comparand = JSON.parse(JSON.stringify(toSync.state));
+      var tmp = [];
+      var attempts = [];
+      for (var k = 0; k < toSync.attempts.length; k++)
+        attempts[k] = toSync.attempts[k];
 
-        var innerLoop = function(i) {
-          if (i >= attempts.length) {
-            toSync.attempts = tmp;
-            if (toSync.attempts.length > 0) {
-              toSync.waitingForReturn = true;
-              toSync.send('attempt', {id: ++transactionId, path: toSync.basePath, attempts: toSync.attempts});
-              toSync.transactionIds.push(transactionId);
-            }
-            return;
+      var innerLoop = function(i) {
+        if (i >= attempts.length) {
+          toSync.attempts = tmp;
+          if (toSync.attempts.length > 0) {
+            toSync.waitingForReturn = true;
+            toSync.send('attempt', {id: ++transactionId, path: toSync.basePath, attempts: toSync.attempts});
+            toSync.transactionIds.push(transactionId);
           }
-           
-          attempts[i].callback(comparand);
-          var a = attempts[i];
-          diffADebug(origin, comparand, function(result) {
-            if (typeof result === 'undefined')
-              a.then(comparand);
-            else {
-              a.delta = result;
-              a.id = ++transactionId;
-              patch(origin, result);
-              patch(that.state, result);
-              tmp.push(a);
-            }
-            
-            innerLoop(++i);
-          });
-        };
-        
-        innerLoop(0);
-      });
+          outerLoop(that.toSync[++l]);
+          return;
+        }
+         
+        attempts[i].callback(comparand);
+        var a = attempts[i];
+        diffADebug(origin, comparand, function(result) {
+          if (typeof result === 'undefined')
+            a.then(comparand);
+          else {
+            a.delta = result;
+            a.id = ++transactionId;
+            patch(origin, result);
+            patch(that.state, result);
+            tmp.push(a);
+          }
+          
+          innerLoop(++i);
+        });
+      };
+      
+      innerLoop(0);
     };
     
+    outerLoop(that.toSync[l]);
+  };
+  
+  STM.prototype.sync = function(interval) {    
     if (typeof interval === 'undefined' && syncInterval === null)
-      op();
+      op(this);
     else if (typeof interval === null && syncInterval !== null) {
-          clearInterval(syncInterval);
+      clearInterval(syncInterval);
       syncInterval = null;
     }
     else if (typeof interval !== 'undefined') {
@@ -194,12 +202,20 @@ operations | params
         clearInterval(syncInterval);
       
       console.log('set');
-      syncInterval = setInterval(op, interval);
+      syncInterval = setInterval(op.bind(this, this), interval);
     }
   }
   
+  var cb = {};
+  var diffId = 0;
+  
   function diffADebug(origin, comparand, callback) {
-    callback(diff(origin, comparand, false));
+    if (worker) {
+      worker.postMessage({id: diffId, 'origin': origin, 'comparand': comparand});
+      cb[diffId++] = callback;
+    }
+    else
+      callback(diff(origin, comparand));
   };
 
   // assert(isPOJS(origin) && isPOJS(comparand))
