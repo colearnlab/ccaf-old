@@ -143,6 +143,9 @@ define(['clientUtil'], function(clientUtil) {
             touchToSub[id].unsubscribe();
           delete touchToSub[id];
         });
+      } else {
+        console.log('x');
+          setTimeout(canvas.onmouseup.bind(e, e), 0);
       }
     }
 
@@ -200,6 +203,9 @@ define(['clientUtil'], function(clientUtil) {
             delete touchToSub[id];
             delete touchToPath[id];
           });
+        } else {
+          console.log('y');
+          setTimeout(canvas.ontouchend.bind(e, e), 0);
         }
       });
     };
