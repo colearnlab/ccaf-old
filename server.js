@@ -10,6 +10,16 @@ function saveDB() {
 
 var dbInterval = setInterval(saveDB, 60 * 1000);
 
+db.apps = {};
+
+fs.readdirSync(path.resolve(__dirname, 'public', 'apps'))
+  .filter(function(maybeDir) {
+    return fs.statSync(path.resolve(__dirname, 'public', 'apps', maybeDir)).isDirectory();
+  })
+  .forEach(function(dir) {
+    db.apps[dir] = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'public', 'apps', dir, 'package.json')));
+  });
+
 var os = require('os');
 var ifaces = os.networkInterfaces();
 var addresses = [];
@@ -40,7 +50,7 @@ addresses.forEach(function(address) {
   }, 150);
 });
 
-var checkerboard = new (require('./checkerboard-server')).Server(config.ports.ws, db);
+var checkerboard = new (require('checkerboard')).Server(config.ports.ws, db);
 console.log('Websocket port: ' + config.ports.ws);
 
 var connect = require('connect');

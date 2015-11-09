@@ -3,12 +3,12 @@
   "version": "0.2.0",
   "main": "client.js",
   "dependencies": {
-    "checkerboard": "^0.2.4",
+    "amdefine": "^1.0.0",
+    "checkerboard": "^0.3.2",
     "connect": "^1.9.2",
     "electron-cookies": "^1.1.0",
     "epictuio": "0.0.1",
     "ip": "^0.3.3",
-    "jsondiffpatch": "^0.1.37",
     "ws": "^0.8.0"
   },
   "devDependencies": {

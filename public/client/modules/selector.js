@@ -1,51 +1,37 @@
-define(['exports', './main'], function(exports, main) {    
-  exports.controller = function() {
-    var classrooms = m.prop({});
-    m.startComputation();
-    main.cb.get('classrooms', function(data) {
-      classrooms(data);
-      m.endComputation();
-    });
+define(['exports'], function(exports) {    
+  exports.controller = function(store) {
     return {
-      'state': m.prop(0),
-      'selectedClassroom': m.prop(null),
-      'classrooms': classrooms
-    }
+      'classroom': m.prop(null)
+    };
   };
   
-  exports.view = function(ctrl) {
-    if (ctrl.state() === 0) {
+  exports.view = function(ctrl, store) {
+    if (ctrl.classroom() === null) {
       return (
         m('div.row', [
           m('div.col-md-4.col-md-offset-4', [
             m('h4', 'Select a classroom'),
-            Object.keys(ctrl.classrooms()).map(function(classroomId) {
-              if(isNaN(classroomId))
-                return '';
+            Object.keys(store.classrooms).map(function(classroomId) {
               return m('a.list-group-item', {
                 'onclick': function() {
-                  ctrl.selectedClassroom(classroomId);
-                  ctrl.state(1);
+                  ctrl.classroom(classroomId);
                 }
-              }, ctrl.classrooms()[classroomId].name)
+              }, store.classrooms[classroomId].name)
             })
           ])
         ])
       );
-    } else if (ctrl.state() === 1) {
+    } else {
       return (
         m('div.row', [
           m('div.col-md-4.col-md-offset-4', [
             m('h4', 'Select a device'),
-            Object.keys(ctrl.classrooms()[ctrl.selectedClassroom()].devices).map(function(deviceId) {
-              if (isNaN(deviceId))
-                return '';
-                
+            Object.keys(store.classrooms[ctrl.classroom()].devices).map(function(deviceId) {
               return m('a.list-group-item', {
                 'onclick': function() {
-                  main.setIdentity(ctrl.selectedClassroom(), deviceId);
+                  store.sendAction('set-identity', ctrl.classroom(), deviceId);
                 }
-              }, ctrl.classrooms()[ctrl.selectedClassroom()].devices[deviceId].name)
+              }, store.classrooms[ctrl.classroom()].devices[deviceId].name)
             })
           ])
         ])

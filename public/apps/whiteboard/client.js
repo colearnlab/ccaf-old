@@ -1,269 +1,143 @@
-define(['clientUtil'], function(clientUtil) {
-  var exports = {};
-  var appRoot, parentElement, params;
-
-  var canvas, ctx, touchToPath, touchToSub, paths, version, pen, lastPath = [], version;
-  var canvasHeight = 5000, canvasTop = 0;
-  
-  function PathFactory(props) {
-    var obj = {};
-    if (arguments.length === 0) {
-      obj.X = {};
-      obj.Y = {};
-      obj.t = {};
-      obj.pen = pen;
-      obj.strokeFinished = false;
-      obj.id = 'a'+Math.floor((1 + Math.random()) * 0x10000000).toString(16);
-      obj.lastPoint = null;
-      
-      return obj;
-    } else {
-      for (var p in props)
-        obj[p] = props[p];
-      
-      obj.lastPoint = 0;
-      
-      drawPath(obj);
-      
-      return obj;
-    }
-  }
-  
- addToPath = function(path, x, y, t) {
-    if (isNaN(x) || x === null || isNaN(y) || y === null)
-      return;
+define(['clientUtil', 'exports'], function(clientUtil, exports) {
+  var canvasHeight = 5000;
+  exports.load = function(el, action, store, params) {
+    var deviceState, canvas, ctx, pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
     
-    var loc = Object.keys(path.X).length;
-    
-    path.X[loc] = parseInt(x);
-    path.Y[loc] = parseInt(y)+ canvasTop;
-    path.t[loc] = t;
-    
-    drawPath(path);
-  }
+    createActions();
+    store.sendAction('init');
+    deviceState = store.deviceState[params.device];
 
-  drawPath = function(path) {
-    ctx.strokeStyle = path.pen.strokeStyle;
-    ctx.lineJoin = "round";
-    ctx.lineWidth = path.pen.lineWidth;
-    
-    var startX, startY;
-    for (var i = (path.lastPoint || 0); i < Object.keys(path.X).length; i++) {
-      if (typeof path.X[i] === 'undefined')
-        continue;
-      startX = path.X[i-1] || path.X[i]-1;
-      startY = path.Y[i-1] || path.Y[i];
-      ctx.beginPath();
-
-      ctx.moveTo(startX, startY);
-
-      ctx.lineTo(path.X[i], path.Y[i]);
-      ctx.closePath();
-      ctx.stroke();
-    }
-    
-    path.lastPoint = Object.keys(path.X).length;
-  }
-
-
-  exports.startApp = function(_appRoot, _parentElement, _params) {
-    appRoot = _appRoot;
-    parentElement = _parentElement;
-    params = _params;
-
-    clientUtil.css('/apps/whiteboard/styles.css');
-
-    canvas = document.createElement('canvas');
-    canvas.width = window.innerWidth;
-    canvas.height = canvasHeight;
-    canvas.style.height = canvasHeight + 'px';
-    ctx = canvas.getContext('2d');
-
-    touchToPath = {};
-    touchToSub = {};
-    paths = {};
-    pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
+    initElements();
+    initListeners();
+    resizeCanvas();
     clearScreen();
     
-    parentElement.appendChild(canvas);
+    deviceState.paths.addObserver(drawPaths);
+    
+    function initElements() {
+      clientUtil.css('/apps/whiteboard/styles.css');
 
-    var controls = document.createElement('div');
-    m.mount(controls, Controls);
-
-    parentElement.appendChild(controls);
-
-    var mouse = 0;
-    canvas.onmousedown = function(e) {
-      var id = 0;
-      mouse = 1;
-      var path = touchToPath[id] = PathFactory();
-      drawnByMe[path.id] = true;
-      addToPath(path, e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
-      drawSub.try(function(root) {
-         root[path.id] = JSON.parse(JSON.stringify(path));
-      }, function(root) {
-        var tmp = drawSub.subscribe(path.id, undefined, function() {
-          touchToSub[id] = tmp;
-        });
-      }); 
+      canvas = document.createElement('canvas'); 
+      el.appendChild(canvas);
+      
+      var controls = document.createElement('div');
+      m.mount(controls, m.component(Controls, {'pen': pen, 'deviceState': deviceState}));
+      el.appendChild(controls);
     }
     
-    canvas.onmousemove = function(e) {
-      if (mouse === 0)
-        return;
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = canvasHeight;
+      canvas.style.height = canvasHeight + 'px';
+      ctx = canvas.getContext('2d');
+    }
 
-      var id = 0;
-      var path = touchToPath[id];
-      addToPath(path, e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop, e.timeStamp);
-      if (typeof touchToSub[id] !== 'undefined') {
-        touchToSub[id].try(function(_path) {
-          _path.X = path.X;
-          _path.Y = path.Y;
-          _path.t = path.t;
+    function createActions() {
+      var curPath = {};
+      action('init')
+        .onReceive(function() {
+          if (typeof this.deviceState === 'undefined')
+            this.deviceState = {};
+          if (typeof this.deviceState[params.device] === 'undefined')
+            this.deviceState[params.device] = {'paths': []};
         });
-      }
+        
+      action('create-path')
+        .onReceive(function(identifier) {
+          this.paths[this.paths.length] = [pen];
+          curPath[identifier] = this.paths.length - 1;
+        })
+        .onRevert(function(identifier) {
+          delete curPath[identifier];
+        });
+        
+      action('add-point')
+        .onReceive(function(identifier, x, y) {
+          if (curPath[identifier] >= 0) {
+            this.paths[curPath[identifier]].sendAction('add-point-2', x, y);
+          }
+          return false;
+        });
+        
+      action('add-point-2')
+        .onReceive(function(x, y) {
+          this.push({'x': x, 'y': y});
+        });
+        
+      action('end-point')
+        .onReceive(function(identifier) {
+          delete curPath[identifier];
+          return false;
+        });
+        
+      action('clear-screen')
+        .onReceive(function() {
+          this.paths = [];
+        });
     }
     
-    canvas.onmouseup = canvas.onmouseout = function(e) {
-      if (mouse === 0)
-        return;
-      mouse = 0;
-      var id = 0;
-      var path = touchToPath[id];
-      if (typeof path === 'undefined')
-        return;
-      if (typeof touchToSub[id] !== 'undefined') {
-        touchToSub[id].try(function(_path) {
-          _path.X = path.X;
-          _path.Y = path.Y;
-          _path.t = path.t;
-          _path.strokeFinished = true;
-        }, function() {
-          if ('unsubscribe' in touchToSub[id])
-            touchToSub[id].unsubscribe();
-          delete touchToSub[id];
-        });
-      } else {
-        console.log('x');
-          setTimeout(canvas.onmouseup.bind(e, e), 0);
+    function initListeners() {
+      canvas.addEventListener('mousedown', function(e) {
+        deviceState.sendAction('create-path', 0);
+      });
+      
+      canvas.addEventListener('mousemove', function(e) {
+        deviceState.sendAction('add-point', 0, e.pageX, e.pageY);
+      });
+      
+      canvas.addEventListener('mouseup', function(e) {
+        deviceState.sendAction('end-point', 0);
+      });
+      
+      canvas.addEventListener('mouseleave', function(e) {
+        deviceState.sendAction('end-point', 0);
+      });
+    };
+    
+    function drawPaths(newPaths, oldPaths) {
+      console.log(newPaths);
+      var path;
+      oldPaths = oldPaths || [];
+      
+      if (newPaths.length < oldPaths.length) {
+        oldPaths = [];
+        clearScreen();
       }
+      
+      newPaths.forEach(function(newPath, i) {
+        ctx.strokeStyle = newPath[0].strokeStyle;
+        ctx.lineWidth = newPath[0].lineWidth;
+        ctx.lineJoin = "round";
+        
+        for (var j = oldPaths[i] ? oldPaths[i].length : 1; j < newPaths[i].length; j++) {
+          path = newPath;
+          ctx.beginPath();
+          if (path[j - 1])
+            ctx.moveTo(path[j - 1].x, path[j - 1].y);
+          else
+            ctx.moveTo(path[j].x - 1, path[j].y);
+            
+          ctx.lineTo(path[j].x, path[j].y);
+          ctx.closePath();
+          ctx.stroke();
+        }
+      });
     }
-
-    canvas.ontouchstart = function(e) {
-      [].forEach.call(e.changedTouches, function(ct) {
-        var id = ct.identifier + 1;
-        var path = touchToPath[id] = PathFactory();
-        drawnByMe[path.id] = true;
-        addToPath(path, ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
-        drawSub.try(function(root) {
-           root[path.id] = JSON.parse(JSON.stringify(path));
-        }, function(root) {
-          var tmp = drawSub.subscribe(path.id, undefined, function() {
-            tmp.try(function(_path) {
-              _path.X = path.X;
-              _path.Y = path.Y;
-              _path.t = path.t;
-            });
-            touchToSub[id] = tmp;
-          });
-        });
-      });
-    };
- 
-    canvas.ontouchmove = function(e) {
-      [].forEach.call(e.changedTouches, function(ct) {
-        var id = ct.identifier + 1;
-        var path = touchToPath[id];
-        addToPath(path, ct.pageX - canvas.offsetLeft, ct.pageY - canvas.offsetTop, e.timeStamp);
-        if (typeof touchToSub[id] !== 'undefined') {
-          touchToSub[id].try(function(_path) {
-            _path.X = path.X;
-            _path.Y = path.Y;
-            _path.t = path.t;
-          });
-        }
-      });
-    };
-
-    canvas.ontouchend = canvas.ontouchcancel = canvas.ontouchleave = function(e) {
-      [].forEach.call(e.changedTouches, function(ct) {
-        var id = ct.identifier + 1;
-        var path = touchToPath[id];
-        if (typeof path === 'undefined')
-          return;
-        if (typeof touchToSub[id] !== 'undefined') {
-          touchToSub[id].try(function(_path) {
-            _path.X = path.X;
-            _path.Y = path.Y;
-            _path.t = path.t;
-            _path.strokeFinished = true;
-          }, function() {
-            if ('unsubscribe' in touchToSub[id])
-              touchToSub[id].unsubscribe();
-            delete touchToSub[id];
-            delete touchToPath[id];
-          });
-        } else {
-          console.log('y');
-          setTimeout(canvas.ontouchend.bind(e, e), 0);
-        }
-      });
-    };
-
-   appRoot.try(function(root) {
-      if (typeof root.deviceState === 'undefined')
-        root.deviceState = {};
-      if (typeof root.deviceState[params.device] === 'undefined')
-        root.deviceState[params.device] = {'drawings': {0:{}}, 'version': [0]}
-      root.deviceState[params.device].device = params.device;
-    }, function(root) {
-      drawSub = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + root.deviceState[params.device].version[0], update, update);
-      appRoot.subscribe('deviceState.' + params.device + '.version', newVersion);
-    });
+    
+    function clearScreen() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
   };
-  var drawSub;
-  var version;
-  var drawnByMe = {};
   
-  function newVersion(vArray) {
-    drawSub.unsubscribe();
-    clearScreen();
-    drawnByMe = {};
-    touchToSub = {};
-    touchToPath = {};
-    paths = {};
-    drawSub = appRoot.subscribe('deviceState.' + params.device + '.drawings.' + vArray[0], update, update);
-  }
-  
-  function update(_root) {
-    root = {paths: _root};
-
-    for (var prop in root.paths) {
-      if (prop in drawnByMe || (prop in paths && paths[prop].strokeFinished === true))
-        continue;
-      if (prop in paths && !paths[prop].strokeFinished) {
-        paths[prop].X = root.paths[prop].X;
-        paths[prop].Y = root.paths[prop].Y;
-      } else if (!(prop in paths)) {
-        paths[prop] = PathFactory(root.paths[prop]);
-      }
-      drawPath(paths[prop]);
-    }
-  }
-
-  function clearScreen() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    lastDraw = [];
-  }
-
   var Controls = {
     'controller': function() {
       return {
-        'map': false,
         'colors': ['red', 'green', 'blue', 'black']
       };
     },
-    'view': function(ctrl) {
+    'view': function(ctrl, args) {
+      var pen = args.pen;
+      var deviceState = args.deviceState;
       return (
         m('div#controls.form-inline', [
           m('#slidercontainer', [
@@ -281,13 +155,7 @@ define(['clientUtil'], function(clientUtil) {
           ]),
           m('button.btn.btn-default.btn-lg', {
             'onclick': function(e) {
-              canvas.classList.add('frozen');
-              appRoot.try(function(root) {
-                root.deviceState[params.device].drawings[++root.deviceState[params.device].version[0]] = {};
-              }, function(root) {
-                canvas.classList.remove('frozen');
-                newVersion(root.deviceState[params.device].version);
-              });
+              deviceState.sendAction('clear-screen');
             }
           }, ['Clear']),
           m('span.spacer1', [m.trust('&nbsp;')]),
@@ -347,6 +215,4 @@ define(['clientUtil'], function(clientUtil) {
       );
     }
   };
-
-  return exports;
 });
