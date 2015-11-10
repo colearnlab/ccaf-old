@@ -1,7 +1,0 @@
-{
-  "title": "NumberNet",
-  "description": "Manipulate virtual clues to collaboratively solve a mystery.",
-  "icon": "icon.png",
-  "client": "client.js",
-  "admin": "admin.js"
- }

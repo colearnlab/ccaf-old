@@ -1,4 +1,56 @@
-define(['clientUtil', 'exports'], function(clientUtil, exports) {
+ function diff(origin, comparand) {
+    if (!isPOJS(origin) || !isPOJS(comparand))
+      throw new Error('Attempting to diff a non-object');
+    var delta = {}, props = [];
+      
+    var originProps = Object.keys(origin), comparandProps = Object.keys(comparand);
+    [].push.apply(props, originProps);
+    [].push.apply(props, comparandProps);
+    props = props.filter(function(element, index, array) {
+      return this.hasOwnProperty(element) ? false : this[element] = true;
+    }, {});
+      
+    var fPropInOrigin, fPropInComparand, fUndefinedInOrigin, fUndefinedInComparand, fTypesMatch, fObjInOrigin, fObjInComparand;
+    var prop, oObj, cObj;
+    for (var i = 0; i < props ? props.length : Math.max(origin.length, comparand.length); i++) {
+      prop = prop;
+      oObj = origin[prop];
+      cObj = comparand[prop];
+      
+      fPropInOrigin = origin.hasOwnProperty(prop);
+      fPropInComparand = comparand.hasOwnProperty(prop);
+      fUndefinedInOrigin = oObj === void 0;
+      fUndefinedInComparand = cObj === void 0;
+      fTypesMatch = toString.call(cObj) === toString.call(oObj);
+      fObjInOrigin = fPropInOrigin && !fUndefinedInOrigin && isPOJS(oObj);
+      fObjInComparand = fPropInComparand && !fUndefinedInComparand && isPOJS(cObj);
+      
+      if (fPropInOrigin && fUndefinedInOrigin && !fUndefinedInComparand)
+        delta[prop] = [1, 1, cObj]; //{_op: 'mu', nmu: cObj};
+      else if (fPropInComparand && (!fUndefinedInOrigin && fPropInOrigin) && fUndefinedInComparand)
+        delta[prop] = [1, 2, null, oObj]; //{_op: 'su', osu: oObj};
+      else if (!fPropInOrigin && fPropInComparand && fUndefinedInComparand)
+        delta[prop] = [0, 2];
+      else if (!fPropInOrigin && fPropInComparand)
+        delta[prop] = [0, 0, cObj]; //{_op: 's', ns: cObj};
+      else if (fPropInOrigin && !fPropInComparand)
+        delta[prop] = [2, 0, null, oObj]; //{_op: 'd', od: oObj}
+      else if (fUndefinedInOrigin && !fPropInComparand)
+        delta[prop] = [2, 1]; //{_op: 'du'};
+      else if (!fTypesMatch || (fTypesMatch && !fObjInOrigin && !fObjInComparand && oObj !== cObj))
+        delta[prop] = [1, 0, cObj, oObj]; //{_op: 'm', om: oObj, nm: cObj};
+      else if (fObjInOrigin && fObjInComparand && typeof (subDelta = diff(oObj, cObj)) !== 'undefined')
+        delta[prop] = subDelta;
+    }
+
+    if (Object.keys(delta).length > 0)
+      return delta;
+  }
+  
+  
+  
+  
+  define(['clientUtil', 'exports'], function(clientUtil, exports) {
   var canvasHeight = 5000;
   exports.load = function(el, action, store, params) {
     var deviceState, canvas, ctx, pen = {'strokeStyle': '#ff0000', 'lineWidth': 10};
@@ -32,9 +84,9 @@ define(['clientUtil', 'exports'], function(clientUtil, exports) {
       canvas.style.height = canvasHeight + 'px';
       ctx = canvas.getContext('2d');
     }
-    
-    var curPath = {}, lastPath = [];
+
     function createActions() {
+      var curPath = {}, lastPath = [];
       action('init')
         .onReceive(function() {
           if (typeof this.deviceState === 'undefined')
@@ -45,13 +97,14 @@ define(['clientUtil', 'exports'], function(clientUtil, exports) {
         
       action('create-path')
         .onReceive(function(identifier) {
-          this.paths[this.paths.length] = [pen];
-          lastPath.push(curPath[identifier] = this.paths.length - 1);
-        });
-        
-      action('set-pen')
-        .onReceive(function() {
-          this[0] = pen;
+          if (typeof curPath[identifier] === 'undefined') {
+            this.paths[this.paths.length] = [pen];
+            lastPath.push(curPath[identifier] = this.paths.length - 1);
+          } else {
+            curPath[identifier] *= -1;
+            this.paths[curPath[identifier]].push(pen);
+            lastPath.push(curPath[identifier]);
+          }
         });
         
       action('add-point')
@@ -60,24 +113,17 @@ define(['clientUtil', 'exports'], function(clientUtil, exports) {
             deviceState.paths[curPath[identifier]].sendAction('add-point-2', x, y);
           }
           return false;
-        })
+        });
         
       action('add-point-2')
         .onReceive(function(x, y) {
           this.push({'x': x, 'y': y});
-        })
-        .onRevert(function(identifier, x, y) {
-          debugger;
         });
         
       action('end-path')
         .onReceive(function(identifier) {
-          if (curPath[identifier] >= 0) {
-            this.paths[this.paths.length] = [];
-            curPath[identifier] = -(this.paths.length - 1);
-          } else {
-            return false;
-          }
+          this.paths[this.paths.length] = [];
+          curPath[identifier] = -(this.paths.length - 1);
         });
         
       action('undo')
@@ -88,22 +134,13 @@ define(['clientUtil', 'exports'], function(clientUtil, exports) {
         
       action('clear-screen')
         .onReceive(function() {
-          curPath = {};
-          lastPath = [];
           this.paths = [];
         });
     }
     
     function initListeners() {
       canvas.addEventListener('mousedown', function(e) {
-        if (typeof curPath[0] === 'undefined')
-          deviceState.sendAction('create-path', 0);
-        else {
-          curPath[0] *= -1;
-          deviceState.paths[curPath[0]].sendAction('set-pen');
-          lastPath.push(curPath[0]);
-        }
-        deviceState.sendAction('add-point', 0, e.pageX, e.pageY + canvas.canvasTop);
+        deviceState.sendAction('create-path', 0);
       });
       
       canvas.addEventListener('mousemove', function(e) {
@@ -130,14 +167,10 @@ define(['clientUtil', 'exports'], function(clientUtil, exports) {
       
       if (newPaths.length < oldPaths.length) {
         oldPaths = [];
-        lastPath = [];
         clearScreen();
       }
       
       newPaths.forEach(function(newPath, i) {
-        if (newPath.length === 0)
-          return;
-          
         ctx.strokeStyle = newPath[0].strokeStyle;
         ctx.lineWidth = newPath[0].lineWidth;
         ctx.lineJoin = "round";

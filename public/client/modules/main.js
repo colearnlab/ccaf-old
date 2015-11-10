@@ -4,30 +4,57 @@ requirejs.config({
     'mithril': '/lib/mithril',
     'checkerboard': '/lib/checkerboard',
     'cookies': '/lib/cookies',
-    'modal': '/client/modules/modal'
+    'modal': '/client/modules/modal',
+    'clientUtil': '/shared/clientUtil'
   }
 });
 
 module = null;
 
-define('main', ['exports', 'checkerboard', 'mithril', './clientUtil', './selector', './cornerMenu', 'cookies', 'modal'], function(exports, checkerboard, m, clientUtil, selector, cornerMenu, cookies, modal) {  
+define('main', ['exports', 'checkerboard', 'mithril', 'clientUtil', './selector', './cornerMenu', 'cookies', 'modal'], function(exports, checkerboard, m, clientUtil, selector, cornerMenu, cookies, modal) {  
   var wsAddress = 'ws://' + window.location.hostname + ':' + (clientUtil.parameter('port') || '1808');
   var stm = new checkerboard.STM(wsAddress);
   var selected, classroom = null, device = null;
   var _store;
   
-  stm.action('set-identity')
+  if (clientUtil.parameter('electron')) {
+    require('ipc').send('client-connected');
+    require('electron-cookies');
+  }
+  
+  document.body.addEventListener('mousewheel', function(e) {
+    return e.preventDefault(), false;
+  });
+  
+  document.body.addEventListener('touchmove', function(e) {
+    if (e.target.tagName !== 'INPUT')
+      return e.preventDefault(), false;
+  });
+  
+  var rec = stm.ws.onclose = function() {
+    document.getElementById('app').classList.add('frozen');
+    modal.display('Disconnected. Trying to reconnect...');
+    document.body.classList.add('disconnected');
+    ws = new WebSocket('ws://' + window.location.hostname + ':' + (clientUtil.parameter('port') || '1808'));
+    ws.onopen = function() {
+      location.reload();
+    }
+    ws.onerror = rec;
+  };
+  
+  var deviceObserver, loadApp;
+  stm.init(function(store) {
+    stm.action('set-identity')
     .onReceive(function(_classroom, _device) {
       selected = true;
       classroom = _classroom;
       device = _device;
       m.redraw();
-      this.classrooms[classroom].devices[device].addObserver(deviceObserver);
+      store.classrooms[classroom].devices[device].addObserver(deviceObserver);
+      modal.display('Connected to:<br>' + store.classrooms[classroom].name + '<br>' + store.classrooms[classroom].devices[device].name);
       return false;
     });
-  
-  var deviceObserver, loadApp;
-  stm.init(function(store) {
+    
     m.mount(document.getElementById('navs'), m.component(main, store));
     
     deviceObserver = function(newValue, oldValue) {

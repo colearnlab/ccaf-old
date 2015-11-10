@@ -1,6 +1,0 @@
-{
-  "title": "Launcher",
-  "icon": "icon.png",
-  "client": "client.js",
-  "exclude": true
-}
