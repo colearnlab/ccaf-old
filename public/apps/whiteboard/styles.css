@@ -1,0 +1,100 @@
+html, body {
+  background-color: #ffffff;
+  overflow: hidden;
+  height: 100%;
+  padding: 0pt;
+}
+
+#app {
+  min-height: 100%;
+}
+
+canvas {
+  position: absolute;
+  width: 100%;
+  top: 0;
+}
+
+.map {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-image: url(https://upload.wikimedia.org/wikipedia/commons/c/ca/Blank_US_map_borders.svg);
+}
+
+#controls {
+  position: absolute;
+  min-height: 50px;
+  z-index: 1;
+  left: 25px;
+  top: 25px;
+  width: 100%;
+}
+
+.brush {
+  height: 50px;
+  width: 50px;
+  display: inline-block;
+  padding: 0;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.brush img {
+  padding: 0;
+  margin: 0;
+}
+
+.spacer1 {
+  display: inline-block;
+  width: 25px;
+}
+
+.spacer2 {
+  display: inline-block;
+  width: 5px;
+}
+
+#slidercontainer {
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  right: 3vw;
+  top: 15vh;
+  background-color: rgba(255, 255, 255, 0.8);
+  transform:  rotate(-90deg);
+  transform-origin: right;
+  width: 75vh;
+}
+#slider {
+    -webkit-appearance: none;
+  margin: 18px 0;
+}
+#slider:focus {
+  outline: none;
+}
+#slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8.4px;
+  cursor: pointer;
+  animate: 0.2s;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  background: #3071a9;
+  border-radius: 1.3px;
+  border: 0.2px solid #010101;
+}
+#slider::-webkit-slider-thumb {
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  border: 1px solid #000000;
+  height: 36px;
+  width: 16px;
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -14px;
+}
+#slider:focus::-webkit-slider-runnable-track {
+  background: #367ebd;
+}

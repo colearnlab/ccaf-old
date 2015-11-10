@@ -1,0 +1,97 @@
+@import "http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css";
+
+.frozen { opacity: 0.25; pointer-events: none; }
+/** {cursor: none;}*/
+body {
+  -webkit-backface-visibility: hidden;
+}
+html, body {
+  background-color: #222222;
+  overflow: hidden;
+  height: 100%;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+#app {
+  height: 100%; width: 100%;
+}
+iframe {
+  border: none; height: 100%; width: 100%; min-height: 100%;
+}
+
+/* source: http://creative-punch.net/2014/02/making-animated-radial-menu-css3-javascript/ */
+.circular-menu {
+  pointer-events: none;
+  width: 250px;
+  height: 250px;
+  right: -65px;
+  top: -75px;
+  z-index: 100;
+  position: absolute;
+}
+
+.corner-shadow {
+  opacity: 0.25;
+  transition: 0.25s all;
+  width: 400px;
+  height: 500px;
+  right: -400px;
+  top: -425px;
+  z-index: 99;
+  position: absolute;
+  background-color: black;
+  border-radius: 50%;
+  box-shadow: -100px 100px 100px #000000;
+}
+
+.circle {
+  width: 250px;
+  height: 250px;
+  opacity: 0;
+  transition: all 0.25s ease-out;
+}
+
+.open.circle {
+  opacity: 1;
+}
+
+.circle span {
+  font-size: 40px;
+  text-decoration: none;
+  color: #fefefe;
+  border: 3px #fefefe solid;
+  border-radius: 50%;
+  display: block;
+  height: 75px;
+  width: 75px;
+  padding: 15px;
+  position: absolute;
+  text-align: center;
+
+}
+
+.menu-button {
+  pointer-events: all;
+  position: absolute;
+  font-size: 40px;
+  top: calc(50% - 30px);
+  left: calc(50% - 30px);
+  text-decoration: none;
+  text-align: center;
+  color: #fefefe;
+  border: 3px #fefefe solid;
+  border-radius: 50%;
+  display: block;
+  height: 75px;
+  width: 75px;
+  padding: 10px;
+  transition: opacity 0.25s;
+}
+
+.activated {
+  background-color: #eef !important;
+}

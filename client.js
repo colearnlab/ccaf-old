@@ -21,7 +21,8 @@ var config = fs.existsSync(path.resolve(__dirname, 'client.json')) ? JSON.parse(
   "server": "localhost"
 };
 
-var tuio = new (require('epictuio'))({'oscHost': '0.0.0.0', 'oscPort': 3333, 'raw': true});
+var epictuio = require('epictuio');
+var tuio = new epictuio({'oscHost': '0.0.0.0', 'oscPort': 3333, 'raw': true});
 tuio.on('raw', function(data) {
 if (loaded)
   mainWindow.webContents.send('tuio', new Bundle(data.slice(2, data.length)));
@@ -60,38 +61,43 @@ var loaded = false;
 app.on('ready', function() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-   // 'always-on-top': true,
-   // 'resizeable': false,
-   // 'fullscreen': true,
-   // 'frame': false,
-   // 'kiosk': true
-  });
-  mainWindow.on('page-title-updated', function(e) {
-    mainWindow.close();
+    'resizeable': false,
+    'frame': false
   });
 
   var dgram = require('dgram');
   var socket = dgram.createSocket('udp4');
 
   socket.on('message', function(buf, info) {
+    console.log('message rec\'d');
     var message = JSON.parse(buf.toString());
     if (!loaded && 'ports' in message) {
+      console.log('Connecting from dgram: ' + JSON.stringify(message));
       mainWindow.loadUrl('http://' + info.address + ':' + message.ports.http + '/?port=' + message.ports.ws + '&electron=1');
       loaded = true;
     }
   });
 
   socket.bind(config.ports.udp);
-  socket.on('listening', function() {
-    socket.setBroadcast(true);
-  });
 
   setTimeout(function() {
     if (!loaded) {
       mainWindow.loadUrl('http://' + config.server + ':' + config.ports.http + '/?port=' + config.ports.ws + '&electron=1');
       loaded = true;
     }
-  }, 0000);
+  }, 5000);
+  
+  mainWindow.loadUrl('data:text/html,Connecting...');
+  
+  require('ipc').on('client-connected', function() {
+    mainWindow.setAlwaysOnTop(true);
+    mainWindow.setFullScreen(true);
+    mainWindow.setKiosk(true);
+  });
+  
+  require('ipc').on('close-window', function() {
+    mainWindow.close();
+  });
 
   mainWindow.on('closed', function() {
     mainWindow = null;
