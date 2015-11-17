@@ -22,24 +22,72 @@ define('main', ['exports', 'checkerboard', 'mithril', 'clientUtil', './selector'
         classroom = _classroom;
         m.redraw();
         store.classrooms[classroom].addObserver(classroomObserver);
-        m.mount(document.getElementById('navs'), m.component(playground, store));
+        m.mount(document.getElementById('navs'), m.component(playground, {'store': store, 'classroom': classroom}));
+        window.addEventListener('resize', m.redraw);
         return false;
       });
       
-    stm.action('change-name')
-      .onReceive(function(name) {
-        this.name = name;
-      });
-    
-    stm.action('set-app')
-      .onReceive(function(app) {
-        this.app = app;
+    stm.action('init')
+      .onReceive(function() {
+        this.classrooms = this.classrooms || {};
+        for (c in this.classrooms) {
+          var classroom = this.classrooms[c];
+          classroom.configuration = classroom.configuration || {};
+          classroom.configuration.instances = classroom.configuration.instances || {};
+          classroom.users = classroom.users || {};
+        }
       });
   
+    stm.action('create-instance')
+      .onReceive(function(app, el) {
+        var cur = this.classrooms[classroom];
+        var i = -1, j = 1;
+        while (++i in cur.configuration.instances);
+        Object.keys(cur.configuration.instances)
+          .map(function(p) { return cur.configuration.instances[p]; })
+          .forEach(function(instance) { 
+            if (instance.app === app) {
+              var num;
+              if (parseInt(instance.title[instance.title.length - 1]) !== NaN) {
+                if (parseInt(instance.title[instance.title.length - 2]) !== NaN)
+                  num = parseInt(instance.title.slice(instance.title.length - 2));
+                else
+                  num = parseInt(instance.title.slice(instance.title.length - 1));
+              
+                if (num && num >= j)
+                  j = num + 1;
+              }
+            }
+          });
+        var k = cur.configuration.instances[i] = {'app': app, 'title': store.apps[app].title + ' ' + j, 'x': getCoords(el).x, 'y': getCoords(el).y};   
+      });
+      
+    stm.action('set-coords')
+      .onReceive(function(el) {
+        this.x = getCoords(el).x;
+        this.y = getCoords(el).y;
+      });
+      
+    stm.action('delete-instance')
+      .onReceive(function(id) {
+        delete this[id];
+      });
+    
+    store.sendAction('init');
+    
     m.mount(document.getElementById('navs'), m.component(selector, store));
     
+    m.redraw.strategy('all');
     var classroomObserver = function(newValue, oldValue) {
-      m.redraw();
+      m.redraw(true);
     };
   });
+  
+  function getCoords(el) {
+    var overhead = document.getElementById('overhead');
+    return {
+      'x': el.getAttribute('data-x') / overhead.offsetWidth,
+      'y': el.getAttribute('data-y') / overhead.offsetHeight
+    };
+  }
 });
