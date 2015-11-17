@@ -4,7 +4,13 @@ requirejs.config({
     'mithril': '/lib/mithril',
     'checkerboard': '/lib/checkerboard',
     'cookies': '/lib/cookies',
-    'clientUtil': '/shared/clientUtil'
+    'clientUtil': '/shared/clientUtil',
+    'underscore': '/lib/underscore'
+  },
+  'shim': {
+    'underscore': {
+      'exports': '_'
+    }
   }
 });
 
