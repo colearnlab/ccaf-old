@@ -6,6 +6,13 @@
     "ccaf-web": "git+https://git@github.com/ccaf/ccaf-web.git"
   },
   "scripts": {
-    "install": "node build install"
+    "install": "node build install",
+    "build-continuous": "nodemon build/server.js"
+  },
+  "devDependencies": {
+    "checkerboard": "^0.3.7",
+    "connect": "^1.9.2",
+    "ip": "^1.0.2",
+    "nodemon": "^1.8.1"
   }
 }

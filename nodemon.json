@@ -1,0 +1,10 @@
+{
+  "watch": [
+    "node_modules/ccaf-server",
+    "node_modules/ccaf-web"
+  ],
+  "events": {
+    "exit": "node build install"
+  },
+  "ignoreRoot": [".git"],
+}
