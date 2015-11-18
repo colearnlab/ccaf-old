@@ -84,9 +84,7 @@ switch(process.argv[2]) {
     copy(require.resolve('ccaf-server'), path.resolve(__dirname, 'build', 'server.js'), function(err) {
       if (err) throw new Error(err);
       
-      ['apps', 'client', 'console', 'shared', 'lib'].forEach(function(folder) {
-        copyRecursiveSync(path.resolve(path.dirname(require.resolve('ccaf-web')), folder), path.resolve(__dirname, 'build', 'public', folder));
-      });
+      copyRecursiveSync(path.resolve(path.dirname(require.resolve('ccaf-web')), 'public'), path.resolve(__dirname, 'build', 'public'));
       
       copyRecursiveSync(path.resolve(__dirname, 'defaults'), path.resolve(__dirname, 'build'));
     });
