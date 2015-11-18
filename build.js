@@ -2,7 +2,7 @@ var fs = require('fs');
 var path = require('path')
 
 if (!process.argv[2])
- throw new Error('no script selected. node build [setup | package].');
+ throw new Error('no script selected. node build [install | package].');
 
 // in lieu of including a bunch of dependencies for simple file functions
 
@@ -72,7 +72,7 @@ function rmdirSync(dirPath) {
 };
 
 switch(process.argv[2]) {
-  case 'setup':
+  case 'install':
     // clean up
     rmdirSync(path.resolve(__dirname, 'build'));
   
