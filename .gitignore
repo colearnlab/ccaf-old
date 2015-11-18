@@ -1,8 +1,5 @@
 node_modules
-tmp
-out
-server
-client.exe
+build
 
 # Windows image file caches
 Thumbs.db
@@ -47,4 +44,3 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
-server.exe

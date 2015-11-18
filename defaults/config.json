@@ -1,8 +1,10 @@
 {
+  "apps": "public/apps",
+  "db": "embedded.db",
   "ports": {
     "http": 1867,
     "ws": 1808,
-    "udp": 8088
+    "udp": 8089
   },
   "broadcast": "172.22.245.255",
   "subnet": "255.255.255.128"

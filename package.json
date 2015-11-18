@@ -1,24 +1,10 @@
 {
-  "name": "reflectproject",
-  "version": "0.3.0",
+  "name": "ccaf",
+  "version": "0.4.0",
   "main": "client.js",
   "dependencies": {
-    "amdefine": "^1.0.0",
-    "checkerboard": "^0.3.2",
-    "connect": "^1.9.2",
-    "electron-cookies": "^1.1.0",
-    "epictuio": "0.0.1",
-    "ip": "^0.3.3",
-    "ws": "^0.8.0"
-  },
-  "devDependencies": {
-    "electron-packager": "^4.2.0",
-    "flatten-packages": "^0.1.4",
-    "nexe": "^0.4.0"
-  },
-  "scripts": {
-    "package-server": "node_modules/.bin/nexe -i ././server.js -o server.exe -r latest -F nodejs",
-    "package-client": "node_modules/.bin/electron-packager ././ client --out=out --ignore=\"(apps|console|client\\index\\.html|lib|node_modules\\checkerboard|node_modules\\express|node_modules\\nexe|tmp|embedded\\.db|server\\.js|server\\.json)\" --version=0.28.3 --platform=win32 --arch=x64",
-    "package-all": "npm install && flatten-packages && npm run package-server & npm run package-client"
+    "ccaf-server": "git+https://git@github.com/ccaf/ccaf-server.git",
+    "ccaf-nativeclient": "git+https://git@github.com/ccaf/ccaf-nativeclient.git",
+    "ccaf-web": "git+https://git@github.com/ccaf/ccaf-web.git"
   }
 }
