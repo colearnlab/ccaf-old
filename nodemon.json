@@ -7,4 +7,5 @@
     "exit": "node build install"
   },
   "ignoreRoot": [".git"],
+  "ext": "js json css html"
 }
