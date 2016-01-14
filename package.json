@@ -3,11 +3,14 @@
   "version": "0.4.0",
   "dependencies": {
     "ccaf-server": "git+https://git@github.com/ccaf/ccaf-server.git",
-    "ccaf-web": "git+https://git@github.com/ccaf/ccaf-web.git"
+    "ccaf-web": "git+https://git@github.com/ccaf/ccaf-web.git",
+    "connect-render": "^0.4.1",
+    "handlebars": "^4.0.5"
   },
   "scripts": {
     "install": "node build install",
-    "build-continuous": "nodemon build/server.js"
+    "build-continuous": "nodemon build/server.js",
+    "start": "node start.js"
   },
   "devDependencies": {
     "checkerboard": "^0.3.7",
