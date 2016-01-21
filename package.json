@@ -5,6 +5,7 @@
     "ccaf-server": "git+https://git@github.com/ccaf/ccaf-server.git",
     "ccaf-web": "git+https://git@github.com/ccaf/ccaf-web.git",
     "connect-render": "^0.4.1",
+    "forever-monitor": "^1.7.0",
     "handlebars": "^4.0.5"
   },
   "scripts": {

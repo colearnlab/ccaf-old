@@ -1,7 +1,7 @@
 var forever = require('forever-monitor');
 
 var child = new (forever.Monitor)('build/server.js', {
-    silent: true,
+    silent: false,
     args: []
 });
 

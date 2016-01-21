@@ -1,1 +1,1 @@
-{"apps":"public/apps","db":"embedded.db","ports":{"http":"1867","ws":"1112","udp":"1111"},"subnet":"255.255.255.128","passcode":""}
+{"apps":"public/apps","db":"embedded.db","ports":{"http":"80","ws":"1112","udp":"1111"},"subnet":"255.255.255.128","passcode":""}
