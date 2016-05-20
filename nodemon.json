@@ -3,8 +3,14 @@
     "node_modules/ccaf-server",
     "node_modules/ccaf-web"
   ],
+  "ignore": [
+    "node_modules/ccaf-web/public/lib/*",
+    "node_modules/ccaf-web/public/fonts/*"
+  ],
   "events": {
-    "exit": "node build install"
+    "exit": "./rebuild.sh",
+    "crash": "./rebuild.sh",
+    "restart": "./rebuild.sh"
   },
   "ignoreRoot": [".git"],
   "ext": "js json css html"

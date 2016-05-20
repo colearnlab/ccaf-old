@@ -75,24 +75,25 @@ switch(process.argv[2]) {
   case 'install':
     // clean up
     rmdirSync(path.resolve(__dirname, 'build'));
-  
+
     // create build folder
     mkdirSync(path.resolve(__dirname, 'build'));
     mkdirSync(path.resolve(__dirname, 'build', 'public'));
-    
+    mkdirSync(path.resolve(__dirname, 'build', 'public', 'logs'));
+
     // get packages and ensure they are present
     copy(require.resolve('ccaf-server'), path.resolve(__dirname, 'build', 'server.js'), function(err) {
       if (err) throw new Error(err);
-      
+
       copyRecursiveSync(path.resolve(path.dirname(require.resolve('ccaf-web')), 'public'), path.resolve(__dirname, 'build', 'public'));
-      
+
       copyRecursiveSync(path.resolve(__dirname, 'defaults'), path.resolve(__dirname, 'build'));
     });
   break;
   case 'package':
-  
-  
-  
+
+
+
   break;
   default:
     throw new Error('invalid script selected. node build [setup | package].');

@@ -13,7 +13,7 @@
   },
   "scripts": {
     "install": "node build install",
-    "build-continuous": "nodemon build/server.js",
+    "build-continuous": "nodemon build/server.js -L --verbose",
     "start": "node start.js"
   },
   "version": "0.4.1"
