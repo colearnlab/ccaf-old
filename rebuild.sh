@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# This script grabs all the relevent parts from ccaf-web and ccaf-server and
+# compiles them into the build folder. The defaults folder contains default
+# configuration information.
+
+# TODO create windows version?
+
 #cd ../ccaf-web
 #npm install --unsafe-perm
 #cd ../ccaf
