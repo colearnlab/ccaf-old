@@ -11,12 +11,9 @@ Make sure you have node and npm installed.
 5. In ccaf:
     npm link ccaf-web
     npm link ccaf-server
-
-What we have done is substituted the ccaf-web and ccaf-server packages in the overarching ccaf package with our own local packages.
-
+What we have done is substituted the ccaf-web and ccaf-server packages in the overarching ccaf package with our own local packages.  
 6. In ccaf:
     sudo npm run build-continuous
-
 Note that nodemon uses a shell script to rebuild currently. If you are on Windows, change event handlers in nodemon.json to 'node build install' instead of './rebuild.sh', but your results will be less reliable and you might need to restart the server after changing anyways (type 'rs' and hit enter).  
 7. Navigate to http://localhost in the browser. Default ports are specified in defaults/config.json. Whenever files in ccaf-web or ccaf-server are changed, the server will automatically be reloaded.
 
