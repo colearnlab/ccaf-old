@@ -24,4 +24,4 @@ and store is the synchronized store:
 ```    
     store.addObserver ...
 ```
-Read the checkerboard documents to learn more about how a synchronized application works. As long as you follow those
+Read the checkerboard documents to learn more about how a synchronized application works. As long as you follow those guidelines, your application will work with ccaf!
