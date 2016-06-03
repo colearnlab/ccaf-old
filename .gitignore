@@ -1,3 +1,6 @@
+defaults/domain.crt
+defaults/domain.key
+
 node_modules
 build
 
