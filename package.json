@@ -9,7 +9,8 @@
     "checkerboard": "^0.4.0",
     "connect": "^1.9.2",
     "ip": "^1.0.2",
-    "nodemon": "^1.8.1"
+    "nodemon": "^1.8.1",
+    "googleapis": "~7.1.0"
   },
   "scripts": {
     "install": "node build install",
