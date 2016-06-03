@@ -1,5 +1,6 @@
 defaults/domain.crt
 defaults/domain.key
+defaults/client_secret.json
 
 node_modules
 build
