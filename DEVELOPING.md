@@ -1,5 +1,14 @@
 ## Developing CCAF or for CCAF: recommended procedure
 
+The easiest way to do this is to use the setup-dev.sh script.
+
+```
+mkdir ccaf-dev && cd ccaf-deb  
+source <(curl -s https://raw.githubusercontent.com/ccaf/ccaf/master/setup-dev.sh)
+```
+
+### Manual setup
+
 Make sure you have node and npm installed.
 
 1. Create a directory to develop in - I usually use ~/Repositories  
@@ -7,10 +16,11 @@ Make sure you have node and npm installed.
 3. In each folder: `npm install`
 4. Both in ccaf-web and ccaf-server: `npm link`
 5. In ccaf: `npm link ccaf-web` and `npm link ccaf-server`
-What we have done is substituted the ccaf-web and ccaf-server packages in the overarching ccaf package with our own local packages.  
-6. In ccaf: `sudo npm run build-continuous`
+What we have done is substituted the ccaf-web and ccaf-server packages in the overarching ccaf package with our own local packages.
+6. Set up a self-signed certificate. `cd defaults` and `openssl req -newkey rsa:2048 -nodes -keyout domain.key -x509 -days 365 -out domain.crt`. **Note that you will get security errors in modern browsers.**  
+7. In ccaf: `sudo npm run build-continuous`  
 Note that nodemon uses a shell script to rebuild currently. If you are on Windows, change event handlers in nodemon.json to 'node build install' instead of './rebuild.sh', but your results will be less reliable and you might need to restart the server after changing anyways (type 'rs' and hit enter).  
-7. Navigate to http://localhost in the browser. Default ports are specified in defaults/config.json. Whenever files in ccaf-web or ccaf-server are changed, the server will automatically be reloaded.
+8. Navigate to http://localhost in the browser. Default ports are specified in defaults/config.json. Whenever files in ccaf-web or ccaf-server are changed, the server will automatically be reloaded.
 
 ### Developing apps
 
